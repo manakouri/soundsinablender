@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -69,7 +70,7 @@ const GameModeScreen = ({ setScreen }) => {
 const WordSetupScreen = ({ settings, setSettings, onStart }) => {
     const [mode, setMode] = useState('practice');
     const handleCheckboxChange = (e, key) => setSettings(prev => ({ ...prev, [key]: e.target.checked }));
-    return React.createElement("div", { className: "space-y-8" },
+    return React.createElement("div", { className: "space-y-6" },
         React.createElement("h1", { className: "text-4xl md:text-6xl font-bold text-center text-gray-700" }, "Word Blender"),
         React.createElement("div", { className: "bg-white p-6 md:p-8 rounded-2xl shadow-lg border-2 border-gray-200" },
             React.createElement("h2", { className: "text-2xl font-bold mb-4 text-center" }, "1. Choose Your Patterns"),
@@ -99,7 +100,7 @@ const WordSetupScreen = ({ settings, setSettings, onStart }) => {
 const SoundSetupScreen = ({ settings, setSettings, onStart }) => {
     const [mode, setMode] = useState('practice');
     const handleCheckboxChange = (e, key) => setSettings(prev => ({ ...prev, [key]: e.target.checked }));
-    return React.createElement("div", { className: "space-y-8" },
+    return React.createElement("div", { className: "space-y-6" },
         React.createElement("h1", { className: "text-4xl md:text-6xl font-bold text-center text-gray-700" }, "Sound Flashcards"),
         React.createElement("div", { className: "bg-white p-6 md:p-8 rounded-2xl shadow-lg border-2 border-gray-200" },
             React.createElement("h2", { className: "text-2xl font-bold mb-4 text-center" }, "1. Choose Your Sounds"),
@@ -248,7 +249,7 @@ const App = () => {
     const [gameType, setGameType] = useState('words');
     const [gameMode, setGameMode] = useState('practice');
     const [wordSettings, setWordSettings] = useState({ digraphs: true, floss: false, longConsonants: false, initialBlends: false, finalBlends: false, silentE: false, longVowels: false });
-    const [soundSettings, setSoundSettings] = useState({ bdpq: true, consonants: true, shortVowels: true, commonLongVowels: false, rControlled: false, lessCommonVowels: false });
+    const [soundSettings, setSoundSettings] = useState({ bdpq: false, consonants: true, shortVowels: true, commonLongVowels: false, rControlled: false, lessCommonVowels: false });
     const [currentWord, setCurrentWord] = useState([]);
     const [currentSound, setCurrentSound] = useState(null);
     const [mySoundsDeck, setMySoundsDeck] = useState([]);
