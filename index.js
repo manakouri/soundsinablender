@@ -33,7 +33,7 @@ const bdpqFonts = ['font-poppins', 'font-nunito', 'font-schoolbell', 'font-patri
 
 // --- INLINED COMPONENTS ---
 
-const Button = ({ children, variant = 'primary', className = '', ...props }) => {
+const Button = ({ children = null, variant = 'primary', className = '', ...props }) => {
     const baseStyle = "w-full py-4 rounded-xl transition-all ease-in-out border-4 font-bold text-white";
     const shadowStyle = "shadow-[6px_6px_0px_#2D3748] border-[#2D3748] active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#2D3748]";
     const variantStyles = {
@@ -44,7 +44,7 @@ const Button = ({ children, variant = 'primary', className = '', ...props }) => 
     return React.createElement("button", { className: `${baseStyle} ${shadowStyle} ${variantStyles[variant]} ${className}`, ...props }, children);
 };
 
-const CheckboxLabel = ({ label, checked, onChange, className }) => {
+const CheckboxLabel = ({ label, checked, onChange, className = '' }) => {
     return React.createElement("label", { className: `w-full p-4 rounded-lg cursor-pointer border-2 transition-all ease-in-out ${checked ? 'bg-green-600 text-white border-green-700' : 'bg-white border-gray-300'} ${className}` },
         React.createElement("input", { type: "checkbox", className: "hidden", checked: checked, onChange: onChange }),
         label
@@ -75,14 +75,14 @@ const WordSetupScreen = ({ settings, setSettings, onStart }) => {
         React.createElement("h1", { className: "text-4xl md:text-6xl font-bold text-center text-gray-700" }, "Word Blender"),
         React.createElement("div", { className: "bg-white p-6 md:p-8 rounded-2xl shadow-lg border-2 border-gray-200" },
             React.createElement("h2", { className: "text-2xl font-bold mb-4 text-center" }, "1. Choose Your Patterns"),
-            React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-lg" },
+            React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-4 text-lg" },
                 React.createElement(CheckboxLabel, { label: "Consonant Digraphs (sh, ch...)", checked: settings.digraphs, onChange: e => handleCheckboxChange(e, 'digraphs') }),
                 React.createElement(CheckboxLabel, { label: "Floss Pattern (ff, ll...)", checked: settings.floss, onChange: e => handleCheckboxChange(e, 'floss') }),
                 React.createElement(CheckboxLabel, { label: "Long Consonants (ck, tch...)", checked: settings.longConsonants, onChange: e => handleCheckboxChange(e, 'longConsonants') }),
                 React.createElement(CheckboxLabel, { label: "Initial Blends (br, cl...)", checked: settings.initialBlends, onChange: e => handleCheckboxChange(e, 'initialBlends') }),
                 React.createElement(CheckboxLabel, { label: "Final Blends (nt, st...)", checked: settings.finalBlends, onChange: e => handleCheckboxChange(e, 'finalBlends') }),
                 React.createElement(CheckboxLabel, { label: "Silent -e", checked: settings.silentE, onChange: e => handleCheckboxChange(e, 'silentE') }),
-                React.createElement("div", { className: "col-span-1 sm:col-span-2 lg:col-span-3" },
+                React.createElement("div", { className: "col-span-1 sm:col-span-2" },
                     React.createElement(CheckboxLabel, { label: "Long Vowel Teams (ai, ee...)", checked: settings.longVowels, onChange: e => handleCheckboxChange(e, 'longVowels') })
                 )
             )
