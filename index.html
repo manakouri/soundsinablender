@@ -243,14 +243,13 @@
             const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
             const generateNextSound = useCallback(() => {
                 if (deck.length === 0) {
-                    setCurrentSound({ text: '👍', font: 'font-poppins', isCapital: false });
+                    setCurrentSound({ text: '👍', font: 'font-poppins' });
                     return;
                 }
                 const text = getRandomElement(deck);
-                const isCapital = Math.random() < 0.3;
                 const isBdpq = patterns.sound_bdpq.includes(text.toLowerCase());
                 const font = getRandomElement(isBdpq ? bdpqFonts : fonts);
-                setCurrentSound({ text: isCapital ? text.toUpperCase() : text, font, isCapital });
+                setCurrentSound({ text: text, font });
             }, [deck]);
             useEffect(() => {
                 generateNextSound();
@@ -289,15 +288,14 @@
             const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
             const generateSound = useCallback((soundPool) => {
                 if (soundPool.length === 0) {
-                    setCurrentSound({ text: '...', font: 'font-poppins', isCapital: false });
+                    setCurrentSound({ text: '...', font: 'font-poppins' });
                     return;
                 }
                 const text = getRandomElement(soundPool);
-                const isCapital = Math.random() < 0.3;
                 const isBdpq = patterns.sound_bdpq.includes(text.toLowerCase());
                 const useBdpqFonts = soundSettings.bdpq && isBdpq;
                 const font = getRandomElement(useBdpqFonts ? bdpqFonts : fonts);
-                setCurrentSound({ text: isCapital ? text.toUpperCase() : text, font, isCapital });
+                setCurrentSound({ text: text, font });
             }, [soundSettings]);
             const generateWordBlend = useCallback(() => {
                 let part1, part2, part3, part4, currentCombination;
