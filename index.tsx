@@ -64,8 +64,8 @@ const GameModeScreen = ({ setScreen }) => {
     return React.createElement("div", { className: "space-y-8 animate-fade-in" },
         React.createElement("h1", { className: "text-4xl md:text-6xl font-bold text-center text-gray-700" }, "Sounds in a Blender"),
         React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-8" },
-            React.createElement(Button, { variant: "secondary", onClick: () => setScreen('soundSetup'), className: "text-3xl md:text-5xl py-8 md:py-16" }, "Sounds"),
-            React.createElement(Button, { variant: "primary", onClick: () => setScreen('wordSetup'), className: "text-3xl md:text-5xl py-8 md:py-16" }, "Words")
+            React.createElement(Button, { variant: "secondary", onClick: () => setScreen('soundSetup'), className: "text-3xl md:text-5xl py-8 md:py-16" }, "Sound Pack"),
+            React.createElement(Button, { variant: "primary", onClick: () => setScreen('wordSetup'), className: "text-3xl md:text-5xl py-8 md:py-16" }, "Word Generator")
         )
     );
 };
@@ -93,8 +93,9 @@ const WordSetupScreen = ({ settings, setSettings, onStart }) => {
             React.createElement("h2", { className: "text-2xl font-bold mb-4 text-center" }, "2. Choose Your Mode"),
             React.createElement("div", { className: "flex justify-center gap-4 text-xl" },
                 React.createElement(RadioLabel, { label: "Practice", name: "word-mode", value: "practice", checked: mode === 'practice', onChange: () => setMode('practice') }),
-                React.createElement(RadioLabel, { label: "Challenge", name: "word-mode", value: "challenge", checked: mode === 'challenge', onChange: () => setMode('challenge') })
-            )
+                React.createElement(RadioLabel, { label: "Skill Check", name: "word-mode", value: "skillCheck", checked: mode === 'skillCheck', onChange: () => setMode('skillCheck') })
+            ),
+             mode === 'skillCheck' && React.createElement("div", { className: "mt-4 text-center text-gray-600 bg-blue-50 border border-blue-200 p-3 rounded-lg" }, "Incorrect sounds will be saved to the 'My Sounds' deck for future practice.")
         ),
         React.createElement(Button, { onClick: () => onStart('words', mode), className: "text-3xl" }, "Start Game")
     );
@@ -120,8 +121,9 @@ const SoundSetupScreen = ({ settings, setSettings, onStart }) => {
             React.createElement("h2", { className: "text-2xl font-bold mb-4 text-center" }, "2. Choose Your Mode"),
             React.createElement("div", { className: "flex justify-center gap-4 text-xl" },
                 React.createElement(RadioLabel, { label: "Practice", name: "sound-mode", value: "practice", checked: mode === 'practice', onChange: () => setMode('practice') }),
-                React.createElement(RadioLabel, { label: "Challenge", name: "sound-mode", value: "challenge", checked: mode === 'challenge', onChange: () => setMode('challenge') })
-            )
+                React.createElement(RadioLabel, { label: "Skill Check", name: "sound-mode", value: "skillCheck", checked: mode === 'skillCheck', onChange: () => setMode('skillCheck') })
+            ),
+            mode === 'skillCheck' && React.createElement("div", { className: "mt-4 text-center text-gray-600 bg-blue-50 border border-blue-200 p-3 rounded-lg" }, "Incorrect sounds will be saved to the 'My Sounds' deck for future practice.")
         ),
         React.createElement(Button, { variant: "secondary", onClick: () => onStart('sounds', mode), className: "text-3xl" }, "Start Game")
     );
@@ -137,20 +139,20 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
     const highScore = localStorage.getItem(`soundsInABlender${gameType}HighScore`) || 0;
     const boxColors = ['bg-yellow-200 text-yellow-800', 'bg-blue-200 text-blue-800', 'bg-pink-200 text-pink-800', 'bg-purple-200 text-purple-800'];
     useEffect(() => {
-        if (gameMode === 'challenge') {
+        if (gameMode === 'skillCheck') {
             timerRef.current = window.setInterval(() => setTimeLeft(prev => prev - 1), 1000);
         }
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [gameMode]);
     useEffect(() => {
-        if (timeLeft <= 0 && gameMode === 'challenge') {
+        if (timeLeft <= 0 && gameMode === 'skillCheck') {
             if (timerRef.current) clearInterval(timerRef.current);
             const finalScore = score + (selectedIncorrect.length === 0 ? 1 : 0);
             onGameOver(finalScore, totalSeen + 1, incorrectSounds);
         }
     }, [timeLeft, gameMode, onGameOver, score, totalSeen, incorrectSounds, selectedIncorrect]);
     const handleNext = () => {
-        if (gameMode === 'challenge') {
+        if (gameMode === 'skillCheck') {
             if (selectedIncorrect.length === 0) {
                 setScore(prev => prev + 1);
             } else {
@@ -163,7 +165,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         onNextItem();
     };
     const toggleIncorrect = (index) => {
-        if (gameMode !== 'challenge') return;
+        if (gameMode !== 'skillCheck') return;
         setSelectedIncorrect(prev => prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]);
     };
     const flashcardBaseStyle = "rounded-2xl flex items-center justify-center aspect-square border-4 shadow-[8px_8px_0px_#4A5568] transition-all";
@@ -172,18 +174,19 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
     return React.createElement("div", { className: "space-y-4" },
         React.createElement("div", { className: "flex justify-end items-center gap-2 mb-2" },
             gameMode === 'practice' ?
-                React.createElement("button", { onClick: () => onSwitchMode('challenge'), title: "Switch to Challenge Mode", className: "py-2 px-4 text-sm font-semibold text-white bg-orange-500 rounded-lg shadow-[4px_4px_0_#2D3748] border-2 border-[#2D3748] hover:bg-orange-600 active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#2D3748]" }, "Challenge Mode") :
+                React.createElement("button", { onClick: () => onSwitchMode('skillCheck'), title: "Switch to Skill Check", className: "py-2 px-4 text-sm font-semibold text-white bg-orange-500 rounded-lg shadow-[4px_4px_0_#2D3748] border-2 border-[#2D3748] hover:bg-orange-600 active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#2D3748]" }, "Skill Check") :
                 React.createElement("button", { onClick: () => onSwitchMode('practice'), title: "Switch to Practice Mode", className: "py-2 px-4 text-sm font-semibold text-white bg-teal-500 rounded-lg shadow-[4px_4px_0_#2D3748] border-2 border-[#2D3748] hover:bg-teal-600 active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#2D3748]" }, "Practice Mode"),
             React.createElement("button", { onClick: onBackToMenu, title: "Back to Menu", className: "p-2 bg-gray-300 text-gray-700 rounded-lg shadow-[4px_4px_0_#2D3748] border-2 border-[#2D3748] hover:bg-gray-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#2D3748]" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" })))
         ),
-        gameMode === 'challenge' && React.createElement("div", { className: "text-center md:flex justify-between items-center text-xl md:text-3xl font-bold" },
+        gameMode === 'skillCheck' && React.createElement("div", { className: "text-center md:flex justify-between items-center text-xl md:text-3xl font-bold" },
             React.createElement("div", { className: "bg-white p-3 rounded-lg shadow-md border-2 border-gray-200" }, "Time: ", React.createElement("span", { className: "text-red-500" }, timeLeft, "s")),
             React.createElement("div", { className: "bg-white p-3 rounded-lg shadow-md border-2 border-gray-200" }, "High Score: ", React.createElement("span", null, highScore)),
             React.createElement("div", { className: "bg-white p-3 rounded-lg shadow-md border-2 border-gray-200" }, "Correct: ", React.createElement("span", { className: "text-green-600" }, score))
         ),
+         gameMode === 'skillCheck' && React.createElement("p", {className: "text-center text-gray-600 mb-2 animate-pulse"}, "Click on any sound you get wrong before hitting the checkmark."),
         React.createElement("div", { className: `grid ${gameType === 'words' ? 'grid-cols-4' : 'grid-cols-1'} gap-2 md:gap-4 text-center font-bold` },
-            gameType === 'words' && currentWord.map((part, i) => React.createElement("div", { key: i, onClick: () => toggleIncorrect(i), className: `${wordCardStyle} ${boxColors[i]} ${selectedIncorrect.includes(i) ? 'border-red-500' : 'border-gray-700'} ${gameMode === 'challenge' ? 'cursor-pointer' : ''}` }, part)),
-            gameType === 'sounds' && currentSound && React.createElement("div", { className: "max-w-xs mx-auto w-full" }, React.createElement("div", { onClick: () => toggleIncorrect(0), className: `${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 ${selectedIncorrect.includes(0) ? 'border-red-500' : 'border-gray-700'} ${gameMode === 'challenge' ? 'cursor-pointer' : ''}` }, currentSound.text))
+            gameType === 'words' && currentWord.map((part, i) => React.createElement("div", { key: i, onClick: () => toggleIncorrect(i), className: `${wordCardStyle} ${boxColors[i]} ${selectedIncorrect.includes(i) ? 'border-red-500' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` }, part)),
+            gameType === 'sounds' && currentSound && React.createElement("div", { className: "max-w-xs mx-auto w-full" }, React.createElement("div", { onClick: () => toggleIncorrect(0), className: `${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 ${selectedIncorrect.includes(0) ? 'border-red-500' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` }, currentSound.text))
         ),
         React.createElement(Button, { onClick: handleNext, variant: "secondary", className: "mt-8" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-12 w-12 mx-auto", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 13l4 4L19 7" })))
     );
@@ -203,7 +206,7 @@ const GameOverScreen = ({ onPlayAgain, onPractice, onMySounds, gameType }) => {
         ),
         React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto" },
             React.createElement(Button, { onClick: onMySounds, variant: "special", className: "text-xl" }, "My Sounds"),
-            React.createElement(Button, { onClick: onPlayAgain, variant: "primary", className: "text-xl" }, "New Challenge"),
+            React.createElement(Button, { onClick: onPlayAgain, variant: "primary", className: "text-xl" }, "New Skill Check"),
             React.createElement(Button, { onClick: onPractice, variant: "secondary", className: "text-xl" }, "Practice Mode")
         )
     );
@@ -230,7 +233,7 @@ const MySoundsScreen = ({ deck, onBack }) => {
     return React.createElement("div", { className: "space-y-6" },
         React.createElement("h1", { className: "text-4xl md:text-6xl font-bold text-center text-gray-700" }, "My Sounds Deck"),
         deck.length === 0 ?
-            React.createElement("p", { className: "text-center text-2xl bg-white p-8 rounded-lg" }, "Your deck is empty. Play a challenge game to add sounds you find tricky!") :
+            React.createElement("p", { className: "text-center text-2xl bg-white p-8 rounded-lg" }, "Your deck is empty. Play a Skill Check to add sounds you find tricky!") :
             React.createElement(React.Fragment, null,
                 React.createElement("div", { className: "max-w-xs mx-auto w-full" },
                     currentSound && React.createElement("div", { className: `${soundCardStyle} ${currentSound.font} bg-orange-200 text-orange-800 border-gray-700` }, currentSound.text)
@@ -362,7 +365,7 @@ const App = () => {
             case 'wordSetup': return React.createElement(WordSetupScreen, { settings: wordSettings, setSettings: setWordSettings, onStart: handleStartGame });
             case 'soundSetup': return React.createElement(SoundSetupScreen, { settings: soundSettings, setSettings: setSoundSettings, onStart: handleStartGame });
             case 'game': return React.createElement(GameScreen, { gameType: gameType, gameMode: gameMode, currentWord: currentWord, currentSound: currentSound, onNextItem: handleNextItem, onSwitchMode: handleSwitchMode, onGameOver: handleGameOver, onBackToMenu: () => setScreen('gameMode') });
-            case 'gameOver': return React.createElement(GameOverScreen, { onPlayAgain: () => handleStartGame(gameType, 'challenge'), onPractice: () => handleStartGame(gameType, 'practice'), onMySounds: () => setScreen('mySounds'), gameType: gameType });
+            case 'gameOver': return React.createElement(GameOverScreen, { onPlayAgain: () => handleStartGame(gameType, 'skillCheck'), onPractice: () => handleStartGame(gameType, 'practice'), onMySounds: () => setScreen('mySounds'), gameType: gameType });
             case 'mySounds': return React.createElement(MySoundsScreen, { deck: mySoundsDeck, onBack: () => setScreen('gameOver') });
             default: return React.createElement(GameModeScreen, { setScreen: setScreen });
         }
