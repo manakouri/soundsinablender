@@ -35,7 +35,7 @@ const forbiddenCombinations = [
     'b-i-tch', 'a-ss', 's-l-u-t', 'r-a-p-e', 'r-ai-p', 'wh-o-r-e', 'f-u-x'
 ];
 
-const fonts = ['font-poppins', 'font-nunito', 'font-lexend', 'font-comic-neue'];
+const fonts = ['font-poppins', 'font-nunito', 'font-lexend', 'font-comic-neue', 'font-dyslexiclogic'];
 const bdpqFonts = ['font-poppins', 'font-nunito', 'font-schoolbell', 'font-patrick-hand', 'font-opendyslexic', 'font-dyslexiclogic'];
 
 // --- INLINED COMPONENTS ---
@@ -171,9 +171,14 @@ const SoundSetupScreen = ({ settings, setSettings, onStart, onBackToMenu }) => {
             React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5 text-lg" },
                 React.createElement(CheckboxLabel, { label: "b/d/p/q letter recognition", checked: settings.bdpq, onChange: e => handleCheckboxChange(e, 'bdpq') }),
                 React.createElement(CheckboxLabel, { label: "Single Consonants", checked: settings.consonants, onChange: e => handleCheckboxChange(e, 'consonants') }),
-                React.createElement("div", { className: "flex items-center justify-between w-full p-4 rounded-lg border-2 transition-all ease-in-out " + (settings.shortVowels ? 'bg-green-600 text-white border-green-700' : 'bg-white border-gray-300') },
-                    React.createElement(CheckboxLabel, { className: "!p-0 !border-0", label: "Short Vowels", checked: settings.shortVowels, onChange: handleShortVowelChange }),
-                    settings.shortVowels && React.createElement(ToggleSwitch, { checked: settings.showVowelImages, onChange: e => handleCheckboxChange(e, 'showVowelImages') })
+                React.createElement("div", { className: `flex items-center justify-between w-full p-4 rounded-lg border-2 transition-all ease-in-out ${settings.shortVowels ? 'bg-green-600 text-white border-green-700' : 'bg-white border-gray-300'}` },
+                    React.createElement("label", { className: "flex-grow cursor-pointer" },
+                        React.createElement("input", { type: "checkbox", className: "hidden", checked: settings.shortVowels, onChange: handleShortVowelChange }),
+                        "Short Vowels"
+                    ),
+                    settings.shortVowels && React.createElement("div", { className: "bg-green-700 p-2 rounded-lg ml-4 flex-shrink-0 animate-fade-in" },
+                        React.createElement(ToggleSwitch, { checked: settings.showVowelImages, onChange: e => handleCheckboxChange(e, 'showVowelImages') })
+                    )
                 ),
                 React.createElement(CheckboxLabel, { label: "Common Long Vowels (ai, igh...)", checked: settings.commonLongVowels, onChange: e => handleCheckboxChange(e, 'commonLongVowels') }),
                 React.createElement(CheckboxLabel, { label: "R-Controlled (ar, or...)", checked: settings.rControlled, onChange: e => handleCheckboxChange(e, 'rControlled') }),
@@ -490,7 +495,7 @@ const App = () => {
         setGameMode(newMode);
         handleStartGame(gameType, newMode);
     };
-    const handleNextItem = () => {
+    const handleNextItem = useCallback(() => {
         if (gameType === 'words') {
             generateWordBlend();
         } else {
@@ -503,7 +508,8 @@ const App = () => {
             if (soundSettings.lessCommonVowels) pool.push(...patterns.sound_lessCommonVowels);
             generateSound([...new Set(pool)]);
         }
-    };
+    }, [gameType, generateWordBlend, generateSound, soundSettings]);
+    
     const handleGameOver = (finalScore, totalSeen, incorrectSounds) => {
         const newDeck = [...new Set([...mySoundsDeck, ...incorrectSounds])];
         setMySoundsDeck(newDeck);
