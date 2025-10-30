@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -35,7 +36,7 @@ const forbiddenCombinations = [
 ];
 
 const fonts = ['font-poppins', 'font-nunito', 'font-lexend', 'font-comic-neue'];
-const bdpqFonts = ['font-poppins', 'font-nunito', 'font-schoolbell', 'font-patrick-hand', 'font-opendyslexic'];
+const bdpqFonts = ['font-poppins', 'font-nunito', 'font-schoolbell', 'font-patrick-hand', 'font-opendyslexic', 'font-dyslexiclogic'];
 
 // --- INLINED COMPONENTS ---
 
