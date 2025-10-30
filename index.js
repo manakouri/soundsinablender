@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -221,13 +222,24 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         }
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [gameMode]);
+    
     useEffect(() => {
         if (timeLeft <= 0 && gameMode === 'skillCheck') {
             if (timerRef.current) clearInterval(timerRef.current);
+            
+            // Process the final card before ending the game
+            let finalIncorrectSounds = [...incorrectSounds];
+            if (selectedIncorrect.length > 0) {
+                const item = gameType === 'words' ? (currentWord || []).flat() : [currentSound.text];
+                const incorrect = item.filter((_, i) => selectedIncorrect.includes(i));
+                finalIncorrectSounds = [...new Set([...incorrectSounds, ...incorrect])];
+            }
+            
             const finalScore = score + (selectedIncorrect.length === 0 ? 1 : 0);
-            onGameOver(finalScore, totalSeen + 1, incorrectSounds);
+            onGameOver(finalScore, totalSeen + 1, finalIncorrectSounds);
         }
-    }, [timeLeft, gameMode, onGameOver, score, totalSeen, incorrectSounds, selectedIncorrect]);
+    }, [timeLeft, gameMode, onGameOver, score, totalSeen, incorrectSounds, selectedIncorrect, gameType, currentWord, currentSound]);
+
     const handleNext = () => {
         if (gameMode === 'skillCheck') {
             if (selectedIncorrect.length === 0) {
@@ -261,7 +273,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                 wordParts.push(React.createElement("div", {
                     key: globalIndex,
                     onClick: () => toggleIncorrect(globalIndex),
-                    className: `${wordCardStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? 'border-red-500' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
+                    className: `${wordCardStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? 'border-red-500 !border-8' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
                 }, part));
                 globalIndex++;
             });
@@ -290,7 +302,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
             gameType === 'sounds' && currentSound && React.createElement("div", { className: "flex items-center justify-center gap-4 md:gap-8" }, 
                  React.createElement("div", { 
                      onClick: () => toggleIncorrect(0), 
-                     className: `w-48 h-48 md:w-64 md:h-64 ${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 p-4 ${selectedIncorrect.includes(0) ? 'border-red-500' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
+                     className: `w-48 h-48 md:w-64 md:h-64 ${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 p-4 ${selectedIncorrect.includes(0) ? 'border-red-500 !border-8' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
                  }, 
                     React.createElement("span", null, currentSound.text)
                 ),
@@ -470,6 +482,12 @@ const App = () => {
     }, [wordSettings]);
 
     useEffect(() => {
+        // Preload vowel images for faster display
+        patterns.sound_shortVowels_with_images.forEach(item => {
+            const img = new Image();
+            img.src = item.image;
+        });
+
         const storedSounds = localStorage.getItem('soundsInABlenderMySounds');
         if (storedSounds) setMySoundsDeck(JSON.parse(storedSounds));
     }, []);
