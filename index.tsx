@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -33,19 +32,16 @@ const bdpqFonts = ['font-poppins', 'font-nunito', 'font-schoolbell', 'font-patri
 
 // --- INLINED COMPONENTS ---
 
-// FIX: Added a default null value for the `children` prop to make it optional. This resolves TypeScript errors for React.createElement calls where children are passed as a separate argument instead of within the props object.
-const Button = ({ children = null, variant = 'primary', className = '', ...props }) => {
-    const baseStyle = "w-full py-4 rounded-xl transition-all ease-in-out border-4 font-bold text-white";
-    const shadowStyle = "shadow-[6px_6px_0px_#2D3748] border-[#2D3748] active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#2D3748]";
+const Button = ({ children = null, variant = 'primary', className = '', disabled = false, ...props }) => {
+    const baseStyle = "w-full py-4 rounded-xl transition-all ease-in-out border-4 font-bold text-white shadow-[6px_6px_0px_#2D3748] border-[#2D3748] active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_#2D3748] disabled:bg-gray-400 disabled:shadow-none disabled:translate-x-1 disabled:translate-y-1 disabled:cursor-not-allowed";
     const variantStyles = {
         primary: "bg-green-600 hover:bg-green-700",
         secondary: "bg-blue-500 hover:bg-blue-600",
         special: "bg-orange-500 hover:bg-orange-600"
     };
-    return React.createElement("button", { className: `${baseStyle} ${shadowStyle} ${variantStyles[variant]} ${className}`, ...props }, children);
+    return React.createElement("button", { className: `${baseStyle} ${variantStyles[variant]} ${className}`, disabled: disabled, ...props }, children);
 };
 
-// FIX: Added a default empty string value for the `className` prop to make it optional, as it was not being passed in some calls.
 const CheckboxLabel = ({ label, checked, onChange, className = '' }) => {
     return React.createElement("label", { className: `w-full p-4 rounded-lg cursor-pointer border-2 transition-all ease-in-out ${checked ? 'bg-green-600 text-white border-green-700' : 'bg-white border-gray-300'} ${className}` },
         React.createElement("input", { type: "checkbox", className: "hidden", checked: checked, onChange: onChange }),
@@ -84,7 +80,8 @@ const WordSetupScreen = ({ settings, setSettings, onStart }) => {
                 React.createElement(CheckboxLabel, { label: "Initial Blends (br, cl...)", checked: settings.initialBlends, onChange: e => handleCheckboxChange(e, 'initialBlends') }),
                 React.createElement(CheckboxLabel, { label: "Final Blends (nt, st...)", checked: settings.finalBlends, onChange: e => handleCheckboxChange(e, 'finalBlends') }),
                 React.createElement(CheckboxLabel, { label: "Silent -e", checked: settings.silentE, onChange: e => handleCheckboxChange(e, 'silentE') }),
-                React.createElement(CheckboxLabel, { label: "Long Vowel Teams (ai, ee...)", checked: settings.longVowels, onChange: e => handleCheckboxChange(e, 'longVowels') })
+                React.createElement(CheckboxLabel, { label: "Long Vowel Teams (ai, ee...)", checked: settings.longVowels, onChange: e => handleCheckboxChange(e, 'longVowels') }),
+                React.createElement(CheckboxLabel, { label: "Multisyllable Words", checked: settings.multisyllable, onChange: e => handleCheckboxChange(e, 'multisyllable') })
             )
         ),
         React.createElement("div", { className: "bg-white p-6 md:p-8 rounded-2xl shadow-lg border-2 border-gray-200" },
@@ -133,9 +130,18 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
     const [totalSeen, setTotalSeen] = useState(0);
     const [incorrectSounds, setIncorrectSounds] = useState([]);
     const [selectedIncorrect, setSelectedIncorrect] = useState([]);
+    const [isSplit, setIsSplit] = useState(false);
     const timerRef = useRef(null);
+
+    useEffect(() => {
+        setIsSplit(false);
+    }, [currentWord]);
+    
     const highScore = localStorage.getItem(`soundsInABlender${gameType}HighScore`) || 0;
-    const boxColors = ['bg-yellow-200 text-yellow-800', 'bg-blue-200 text-blue-800', 'bg-pink-200 text-pink-800', 'bg-purple-200 text-purple-800'];
+    const boxColors = ['bg-rose-200 text-rose-800', 'bg-amber-200 text-amber-800', 'bg-teal-200 text-teal-800', 'bg-sky-200 text-sky-800'];
+    const isMultisyllable = currentWord.length > 1;
+    const isNextDisabled = isMultisyllable && isSplit;
+
     useEffect(() => {
         if (gameMode === 'skillCheck') {
             timerRef.current = window.setInterval(() => setTimeLeft(prev => prev - 1), 1000);
@@ -154,8 +160,9 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
             if (selectedIncorrect.length === 0) {
                 setScore(prev => prev + 1);
             } else {
-                const incorrect = gameType === 'words' ? currentWord.filter((_, i) => selectedIncorrect.includes(i)) : [currentSound?.text.toLowerCase() ?? ''];
-                setIncorrectSounds(prev => [...prev, ...incorrect]);
+                const flatWord = currentWord.flat();
+                const incorrect = flatWord.filter((_, i) => selectedIncorrect.includes(i));
+                setIncorrectSounds(prev => [...new Set([...prev, ...incorrect])]);
             }
             setTotalSeen(prev => prev + 1);
         }
@@ -169,6 +176,27 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
     const flashcardBaseStyle = "rounded-2xl flex items-center justify-center aspect-square border-4 shadow-[8px_8px_0px_#4A5568] transition-all";
     const soundCardStyle = `text-[clamp(3rem,25vw,10rem)] ${flashcardBaseStyle}`;
     const wordCardStyle = `text-[clamp(2rem,12vw,6rem)] ${flashcardBaseStyle}`;
+
+    const renderWord = () => {
+        const wordParts = [];
+        let globalIndex = 0;
+        currentWord.forEach((syllable, s_idx) => {
+            syllable.forEach((part, p_idx) => {
+                const colorIndex = p_idx % boxColors.length;
+                wordParts.push(React.createElement("div", {
+                    key: globalIndex,
+                    onClick: () => toggleIncorrect(globalIndex),
+                    className: `${wordCardStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? 'border-red-500' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
+                }, part));
+                globalIndex++;
+            });
+            if (isSplit && s_idx < currentWord.length - 1) {
+                wordParts.push(React.createElement("div", { key: `gap-${s_idx}`, className: "w-8 md:w-12 flex-shrink-0" }));
+            }
+        });
+        return wordParts;
+    };
+    
     return React.createElement("div", { className: "space-y-4" },
         React.createElement("div", { className: "flex justify-end items-center gap-2 mb-2" },
             gameMode === 'practice' ?
@@ -181,12 +209,16 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
             React.createElement("div", { className: "bg-white p-3 rounded-lg shadow-md border-2 border-gray-200" }, "High Score: ", React.createElement("span", null, highScore)),
             React.createElement("div", { className: "bg-white p-3 rounded-lg shadow-md border-2 border-gray-200" }, "Correct: ", React.createElement("span", { className: "text-green-600" }, score))
         ),
-         gameMode === 'skillCheck' && React.createElement("p", {className: "text-center text-gray-600 mb-2 animate-pulse"}, "Click on any sound you get wrong before hitting the checkmark."),
-        React.createElement("div", { className: `grid ${gameType === 'words' ? 'grid-cols-4' : 'grid-cols-1'} gap-2 md:gap-4 text-center font-bold` },
-            gameType === 'words' && currentWord.map((part, i) => React.createElement("div", { key: i, onClick: () => toggleIncorrect(i), className: `${wordCardStyle} ${boxColors[i]} ${selectedIncorrect.includes(i) ? 'border-red-500' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` }, part)),
+        gameMode === 'skillCheck' && React.createElement("p", {className: "text-center text-gray-600 mb-2 animate-pulse"}, "Click on any sound you get wrong before hitting the checkmark."),
+        React.createElement("div", { className: "text-center font-bold" },
+            gameType === 'words' && React.createElement("div", { className: `flex flex-wrap justify-center items-center gap-2 md:gap-4`}, ...renderWord()),
             gameType === 'sounds' && currentSound && React.createElement("div", { className: "max-w-xs mx-auto w-full" }, React.createElement("div", { onClick: () => toggleIncorrect(0), className: `${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 ${selectedIncorrect.includes(0) ? 'border-red-500' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` }, currentSound.text))
         ),
-        React.createElement(Button, { onClick: handleNext, variant: "secondary", className: "mt-8" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-12 w-12 mx-auto", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 13l4 4L19 7" })))
+        isMultisyllable && React.createElement(Button, { onClick: () => setIsSplit(p => !p), variant: "special", className: "!py-2 !text-lg max-w-xs mx-auto mt-4" }, isSplit ? "Join" : "Split"),
+        React.createElement("div", { className: "mt-8" },
+            isNextDisabled && React.createElement("p", {className: "text-center text-red-500 mb-2 animate-pulse"}, "Please join the word before continuing."),
+            React.createElement(Button, { onClick: handleNext, variant: "secondary", disabled: isNextDisabled }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-12 w-12 mx-auto", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 13l4 4L19 7" })))
+        )
     );
 };
 
@@ -252,7 +284,7 @@ const App = () => {
     const [screen, setScreen] = useState('gameMode');
     const [gameType, setGameType] = useState('words');
     const [gameMode, setGameMode] = useState('practice');
-    const [wordSettings, setWordSettings] = useState({ digraphs: true, floss: false, longConsonants: false, initialBlends: false, finalBlends: false, silentE: false, longVowels: false });
+    const [wordSettings, setWordSettings] = useState({ digraphs: true, floss: false, longConsonants: false, initialBlends: false, finalBlends: false, silentE: false, longVowels: false, multisyllable: false });
     const [soundSettings, setSoundSettings] = useState({ bdpq: false, consonants: true, shortVowels: true, commonLongVowels: false, rControlled: false, lessCommonVowels: false });
     const [currentWord, setCurrentWord] = useState([]);
     const [currentSound, setCurrentSound] = useState(null);
@@ -269,49 +301,62 @@ const App = () => {
         const font = getRandomElement(useBdpqFonts ? bdpqFonts : fonts);
         setCurrentSound({ text: text, font });
     }, [soundSettings]);
+    
     const generateWordBlend = useCallback(() => {
-        let part1, part2, part3, part4, currentCombination;
-        do {
-            const pool1 = [...patterns.consonants.filter(c => c !== 'x'), ...patterns.qu];
-            if (wordSettings.digraphs) pool1.push(...patterns.digraphs.filter(d => d !== 'ng'));
-            if (wordSettings.initialBlends) pool1.push(...patterns.initialBlends);
-            const pool2 = [...patterns.vowels];
-            if (wordSettings.longVowels) pool2.push(...patterns.longVowels);
-            part1 = getRandomElement(pool1);
-            part2 = getRandomElement(pool2);
-            const consonantsForPool3 = patterns.consonants.filter(c => !['y', 'w', 'h', 'j', 'r'].includes(c));
-            const isLongVowel = patterns.longVowels.includes(part2);
-            const pool3 = [...consonantsForPool3];
-            if (wordSettings.digraphs) pool3.push('ng');
-            if (wordSettings.floss && !isLongVowel) pool3.push(...patterns.floss);
-            if (wordSettings.longConsonants && !isLongVowel) pool3.push(...patterns.longConsonants);
-            if (wordSettings.finalBlends) {
-                let finalBlendsToAdd = patterns.finalBlends.filter(b => b !== 'rt');
-                if (isLongVowel) finalBlendsToAdd = finalBlendsToAdd.filter(b => !['rt', 'mp', 'pt'].includes(b));
-                pool3.push(...finalBlendsToAdd);
-            }
-            part3 = ''; part4 = '';
-            if (wordSettings.silentE && patterns.vowels.includes(part2) && Math.random() < 0.4) {
-                const singleConsonantPool = pool3.filter(p => consonantsForPool3.includes(p));
-                if (singleConsonantPool.length > 0) {
-                    part3 = getRandomElement(singleConsonantPool);
-                    part4 = 'e';
+        const generateSyllable = () => {
+            let part1, part2, part3, part4, currentCombination;
+            do {
+                const pool1 = [...patterns.consonants.filter(c => c !== 'x'), ...patterns.qu];
+                if (wordSettings.digraphs) pool1.push(...patterns.digraphs.filter(d => d !== 'ng'));
+                if (wordSettings.initialBlends) pool1.push(...patterns.initialBlends);
+                const pool2 = [...patterns.vowels];
+                if (wordSettings.longVowels) pool2.push(...patterns.longVowels);
+                part1 = getRandomElement(pool1);
+                part2 = getRandomElement(pool2);
+                const consonantsForPool3 = patterns.consonants.filter(c => !['y', 'w', 'h', 'j', 'r'].includes(c));
+                const isLongVowel = patterns.longVowels.includes(part2);
+                const pool3 = [...consonantsForPool3];
+                if (wordSettings.digraphs) pool3.push('ng');
+                if (wordSettings.floss && !isLongVowel) pool3.push(...patterns.floss);
+                if (wordSettings.longConsonants && !isLongVowel) pool3.push(...patterns.longConsonants);
+                if (wordSettings.finalBlends) {
+                    let finalBlendsToAdd = patterns.finalBlends.filter(b => b !== 'rt');
+                    if (isLongVowel) finalBlendsToAdd = finalBlendsToAdd.filter(b => !['rt', 'mp', 'pt'].includes(b));
+                    pool3.push(...finalBlendsToAdd);
                 }
-            }
-            if (part3 === '') {
-                const safePool3 = pool3.filter(p => !['f', 'l', 's', 'z', 'c', 'v'].includes(p) && p);
-                part3 = getRandomElement(safePool3.length > 0 ? safePool3 : pool3.filter(p => p));
-                part4 = '';
-            }
-            part1 = part1 || ''; part2 = part2 || ''; part3 = part3 || '';
-            currentCombination = [part1, part2, part3, part4].filter(Boolean).join('-');
-        } while (forbiddenCombinations.includes(currentCombination));
-        setCurrentWord([part1, part2, part3, part4].filter(p => p !== ''));
+                part3 = ''; part4 = '';
+                if (wordSettings.silentE && patterns.vowels.includes(part2) && Math.random() < 0.4) {
+                    const singleConsonantPool = pool3.filter(p => consonantsForPool3.includes(p));
+                    if (singleConsonantPool.length > 0) {
+                        part3 = getRandomElement(singleConsonantPool);
+                        part4 = 'e';
+                    }
+                }
+                if (part3 === '') {
+                    const safePool3 = pool3.filter(p => !['f', 'l', 's', 'z', 'c', 'v'].includes(p) && p);
+                    part3 = getRandomElement(safePool3.length > 0 ? safePool3 : pool3.filter(p => p));
+                    part4 = '';
+                }
+                part1 = part1 || ''; part2 = part2 || ''; part3 = part3 || '';
+                currentCombination = [part1, part2, part3, part4].filter(Boolean).join('-');
+            } while (forbiddenCombinations.includes(currentCombination) || (part1 === 'qu' && part2 === 'u'));
+            return [part1, part2, part3, part4].filter(p => p !== '');
+        };
+
+        if (wordSettings.multisyllable) {
+            const syllable1 = generateSyllable();
+            const syllable2 = generateSyllable();
+            setCurrentWord([syllable1, syllable2]);
+        } else {
+            setCurrentWord([generateSyllable()]);
+        }
     }, [wordSettings]);
+
     useEffect(() => {
         const storedSounds = localStorage.getItem('soundsInABlenderMySounds');
         if (storedSounds) setMySoundsDeck(JSON.parse(storedSounds));
     }, []);
+
     const handleStartGame = (type, mode) => {
         setGameType(type);
         setGameMode(mode);
