@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -300,12 +301,13 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
             gameType === 'words' && React.createElement("div", { className: `flex flex-wrap justify-center items-center gap-2 md:gap-4`}, ...renderWord()),
             gameType === 'sounds' && currentSound && React.createElement("div", { className: "flex items-center justify-center gap-4 md:gap-8" }, 
                  React.createElement("div", { 
+                     key: `sound-card-${totalSeen}`,
                      onClick: () => toggleIncorrect(0), 
                      className: `w-full max-w-[12rem] md:max-w-[16rem] ${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 ${selectedIncorrect.includes(0) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
                  }, 
                     currentSound.text
                 ),
-                currentSound.image && React.createElement("div", { className: `w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-gray-700 shadow-[8px_8px_0px_#4A5568] bg-white p-4`},
+                currentSound.image && React.createElement("div", { key: `sound-image-${totalSeen}`, className: `w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-gray-700 shadow-[8px_8px_0px_#4A5568] bg-white p-4`},
                     React.createElement("img", { src: currentSound.image, alt: currentSound.keyword, className: "w-full h-full object-contain" })
                 )
             )
@@ -423,7 +425,17 @@ const App = () => {
     }, [soundSettings]);
     
     const generateWordBlend = useCallback(() => {
-        const generateSyllable = () => {
+        const generateCVCSyllable = () => {
+            const part1 = getRandomElement(patterns.consonants.filter(c => c !== 'x' && c !== 'q'));
+            const shortVowelPool = wordSettings.selectedShortVowels.length > 0 
+                ? wordSettings.selectedShortVowels 
+                : patterns.vowels;
+            const part2 = getRandomElement(shortVowelPool);
+            const part3 = getRandomElement(patterns.consonants.filter(c => !['y', 'w', 'h', 'j', 'r', 'q'].includes(c)));
+            return [part1, part2, part3];
+        };
+
+        const generateComplexSyllable = () => {
             let part1, part2, part3, part4, currentCombination;
             do {
                 const pool1 = [...patterns.consonants.filter(c => c !== 'x'), ...patterns.qu];
@@ -434,8 +446,7 @@ const App = () => {
                 if (wordSettings.useShortVowels) pool2.push(...wordSettings.selectedShortVowels);
                 if (wordSettings.longVowels) pool2.push(...patterns.longVowels);
                 
-                if (pool2.length === 0) { // Safety net if no vowels are selected
-                    setCurrentWord([['error']]);
+                if (pool2.length === 0) {
                     return ['error'];
                 }
 
@@ -472,11 +483,11 @@ const App = () => {
         };
 
         if (wordSettings.multisyllable) {
-            const syllable1 = generateSyllable();
-            const syllable2 = generateSyllable();
+            const syllable1 = generateCVCSyllable();
+            const syllable2 = generateComplexSyllable();
             setCurrentWord([syllable1, syllable2]);
         } else {
-            setCurrentWord([generateSyllable()]);
+            setCurrentWord([generateComplexSyllable()]);
         }
     }, [wordSettings]);
 
