@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -256,7 +257,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         if (gameMode !== 'skillCheck') return;
         setSelectedIncorrect(prev => prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]);
     };
-    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center border-4 border-gray-700 transition-transform transition-shadow duration-150 ease-in-out";
+    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center transition-transform transition-shadow duration-150 ease-in-out";
 
     const renderWord = () => {
         if (!currentWord || !Array.isArray(currentWord) || currentWord.length === 0) return null;
@@ -269,7 +270,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                 wordParts.push(React.createElement("div", {
                     key: globalIndex,
                     onClick: () => toggleIncorrect(globalIndex),
-                    className: `w-24 h-24 md:w-32 md:h-32 text-5xl md:text-6xl ${flashcardBaseStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? '-translate-y-2 shadow-[10px_10px_0px_#ef4444]' : 'shadow-[8px_8px_0px_#4A5568]'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
+                    className: `p-4 md:p-6 aspect-square text-5xl md:text-6xl ${flashcardBaseStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? '-translate-y-2 shadow-[10px_10px_0px_#ef4444]' : 'shadow-[8px_8px_0px_#4A5568]'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
                 }, part));
                 globalIndex++;
             });
@@ -360,7 +361,7 @@ const MySoundsScreen = ({ deck, onBack }) => {
     useEffect(() => {
         generateNextSound();
     }, [generateNextSound]);
-    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center border-4 shadow-[8px_8px_0px_#4A5568]";
+    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center shadow-[8px_8px_0px_#4A5568]";
     
     return React.createElement("div", { className: "space-y-6" },
         React.createElement("h1", { className: "text-4xl md:text-6xl font-bold text-center text-gray-700" }, "My Sounds Deck"),
@@ -369,7 +370,7 @@ const MySoundsScreen = ({ deck, onBack }) => {
             React.createElement(React.Fragment, null,
                 React.createElement("div", { className: "flex items-center justify-center gap-4 md:gap-8" },
                     currentSound && React.createElement(React.Fragment, null,
-                        React.createElement("div", { className: `w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${flashcardBaseStyle} ${currentSound.font} bg-orange-200 text-orange-800 border-gray-700 p-4` }, 
+                        React.createElement("div", { className: `w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${flashcardBaseStyle} ${currentSound.font} bg-orange-200 text-orange-800 p-4` }, 
                             currentSound.text
                         ),
                         currentSound.image && React.createElement("div", { className: "w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-gray-700 shadow-[8px_8px_0px_#4A5568] bg-white p-4" },
