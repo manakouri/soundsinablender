@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -305,7 +302,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                      onClick: () => toggleIncorrect(0), 
                      className: `w-48 h-48 md:w-64 md:h-64 ${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 p-4 ${selectedIncorrect.includes(0) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
                  }, 
-                    React.createElement("span", null, currentSound.text)
+                    currentSound.text
                 ),
                 currentSound.image && React.createElement("div", { className: `w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-gray-700 shadow-[8px_8px_0px_#4A5568] bg-white p-4`},
                     React.createElement("img", { src: currentSound.image, alt: currentSound.keyword, className: "w-full h-full object-contain" })
