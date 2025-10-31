@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -300,7 +301,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
             gameType === 'sounds' && currentSound && React.createElement("div", { className: "flex items-center justify-center gap-4 md:gap-8" }, 
                  React.createElement("div", { 
                      onClick: () => toggleIncorrect(0), 
-                     className: `w-48 h-48 md:w-64 md:h-64 ${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 p-4 ${selectedIncorrect.includes(0) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
+                     className: `w-full max-w-[12rem] md:max-w-[16rem] ${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 ${selectedIncorrect.includes(0) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
                  }, 
                     currentSound.text
                 ),
