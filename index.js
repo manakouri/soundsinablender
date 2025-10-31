@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -255,7 +256,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         if (gameMode !== 'skillCheck') return;
         setSelectedIncorrect(prev => prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]);
     };
-    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center shadow-[8px_8px_0px_#4A5568]";
+    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center border-4 border-gray-700 transition-transform transition-shadow duration-150 ease-in-out";
 
     const renderWord = () => {
         if (!currentWord || !Array.isArray(currentWord) || currentWord.length === 0) return null;
@@ -268,7 +269,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                 wordParts.push(React.createElement("div", {
                     key: globalIndex,
                     onClick: () => toggleIncorrect(globalIndex),
-                    className: `w-24 h-24 md:w-32 md:h-32 text-5xl md:text-6xl ${flashcardBaseStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
+                    className: `w-24 h-24 md:w-32 md:h-32 text-5xl md:text-6xl ${flashcardBaseStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? '-translate-y-2 shadow-[10px_10px_0px_#ef4444]' : 'shadow-[8px_8px_0px_#4A5568]'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
                 }, part));
                 globalIndex++;
             });
@@ -298,7 +299,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                  React.createElement("div", { 
                      key: `sound-card-${totalSeen}`,
                      onClick: () => toggleIncorrect(0), 
-                     className: `w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${flashcardBaseStyle} ${currentSound.font} bg-green-200 text-green-800 ${selectedIncorrect.includes(0) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
+                     className: `w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${flashcardBaseStyle} ${currentSound.font} bg-green-200 text-green-800 ${selectedIncorrect.includes(0) ? '-translate-y-2 shadow-[10px_10px_0px_#ef4444]' : 'shadow-[8px_8px_0px_#4A5568]'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
                  }, 
                     currentSound.text
                 ),
