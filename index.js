@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -21,11 +17,11 @@ const patterns = {
     sound_consonants: ['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'y', 'z'],
     sound_shortVowels: ['a', 'e', 'i', 'o', 'u'],
     sound_shortVowels_with_images: [
-        { sound: 'a', image: 'https://i.ibb.co/LDYPNDB2/Apple-a.png', keyword: 'apple' },
-        { sound: 'e', image: 'https://i.ibb.co/LdZh8MT9/egg-e.png', keyword: 'egg' },
-        { sound: 'i', image: 'https://i.ibb.co/gLr3rFx4/igloo-i.png', keyword: 'igloo' },
-        { sound: 'o', image: 'https://i.ibb.co/Q3MPBkJv/orange-o.png', keyword: 'orange' },
-        { sound: 'u', image: 'https://i.ibb.co/fd1Vtbvd/umbrella-u.png', keyword: 'umbrella' }
+        { sound: 'a', image: 'https://i.ibb.co/wYpBfB2/Apple-a.png', keyword: 'apple' },
+        { sound: 'e', image: 'https://i.ibb.co/d2CgQx8/egg-e.png', keyword: 'egg' },
+        { sound: 'i', image: 'https://i.ibb.co/mXzS0W2/igloo-i.png', keyword: 'igloo' },
+        { sound: 'o', image: 'https://i.ibb.co/B2Ky52V/orange-o.png', keyword: 'orange' },
+        { sound: 'u', image: 'https://i.ibb.co/fQzL9P6/umbrella-u.png', keyword: 'umbrella' }
     ],
     sound_commonLongVowels: ['ai', 'ay', 'ee', 'ea', 'ou', 'ow', 'igh', 'oi', 'oy'],
     sound_rControlled: ['ar', 'er', 'ir', 'ur', 'or'],
@@ -259,9 +255,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         if (gameMode !== 'skillCheck') return;
         setSelectedIncorrect(prev => prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]);
     };
-    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center aspect-square shadow-[8px_8px_0px_#4A5568]";
-    const soundCardStyle = `text-[clamp(3rem,25vw,10rem)] ${flashcardBaseStyle}`;
-    const wordCardStyle = `text-[clamp(2rem,12vw,6rem)] ${flashcardBaseStyle}`;
+    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center shadow-[8px_8px_0px_#4A5568]";
 
     const renderWord = () => {
         if (!currentWord || !Array.isArray(currentWord) || currentWord.length === 0) return null;
@@ -274,7 +268,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                 wordParts.push(React.createElement("div", {
                     key: globalIndex,
                     onClick: () => toggleIncorrect(globalIndex),
-                    className: `${wordCardStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
+                    className: `w-24 h-24 md:w-32 md:h-32 text-5xl md:text-6xl ${flashcardBaseStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
                 }, part));
                 globalIndex++;
             });
@@ -304,7 +298,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                  React.createElement("div", { 
                      key: `sound-card-${totalSeen}`,
                      onClick: () => toggleIncorrect(0), 
-                     className: `w-48 h-48 md:w-64 md:h-64 ${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 ${selectedIncorrect.includes(0) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
+                     className: `w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${flashcardBaseStyle} ${currentSound.font} bg-green-200 text-green-800 ${selectedIncorrect.includes(0) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
                  }, 
                     currentSound.text
                 ),
@@ -365,8 +359,8 @@ const MySoundsScreen = ({ deck, onBack }) => {
     useEffect(() => {
         generateNextSound();
     }, [generateNextSound]);
-    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center aspect-square border-4 shadow-[8px_8px_0px_#4A5568] transition-all";
-    const soundCardStyle = `text-[clamp(3rem,25vw,10rem)] ${flashcardBaseStyle}`;
+    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center border-4 shadow-[8px_8px_0px_#4A5568]";
+    
     return React.createElement("div", { className: "space-y-6" },
         React.createElement("h1", { className: "text-4xl md:text-6xl font-bold text-center text-gray-700" }, "My Sounds Deck"),
         deck.length === 0 ?
@@ -374,8 +368,8 @@ const MySoundsScreen = ({ deck, onBack }) => {
             React.createElement(React.Fragment, null,
                 React.createElement("div", { className: "flex items-center justify-center gap-4 md:gap-8" },
                     currentSound && React.createElement(React.Fragment, null,
-                        React.createElement("div", { className: `w-48 h-48 md:w-64 md:h-64 ${soundCardStyle} ${currentSound.font} bg-orange-200 text-orange-800 border-gray-700 p-4` }, 
-                            React.createElement("span", null, currentSound.text)
+                        React.createElement("div", { className: `w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${flashcardBaseStyle} ${currentSound.font} bg-orange-200 text-orange-800 border-gray-700 p-4` }, 
+                            currentSound.text
                         ),
                         currentSound.image && React.createElement("div", { className: "w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-gray-700 shadow-[8px_8px_0px_#4A5568] bg-white p-4" },
                              React.createElement("img", { src: currentSound.image, alt: currentSound.keyword, className: "w-full h-full object-contain" })
