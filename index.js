@@ -258,7 +258,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         if (gameMode !== 'skillCheck') return;
         setSelectedIncorrect(prev => prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]);
     };
-    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center aspect-square border-4 shadow-[8px_8px_0px_#4A5568] transition-all";
+    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center aspect-square shadow-[8px_8px_0px_#4A5568] transition-all";
     const soundCardStyle = `text-[clamp(3rem,25vw,10rem)] ${flashcardBaseStyle}`;
     const wordCardStyle = `text-[clamp(2rem,12vw,6rem)] ${flashcardBaseStyle}`;
 
@@ -273,7 +273,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                 wordParts.push(React.createElement("div", {
                     key: globalIndex,
                     onClick: () => toggleIncorrect(globalIndex),
-                    className: `${wordCardStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? 'border-red-500 !border-8' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
+                    className: `${wordCardStyle} ${boxColors[colorIndex]} ${selectedIncorrect.includes(globalIndex) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
                 }, part));
                 globalIndex++;
             });
@@ -302,7 +302,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
             gameType === 'sounds' && currentSound && React.createElement("div", { className: "flex items-center justify-center gap-4 md:gap-8" }, 
                  React.createElement("div", { 
                      onClick: () => toggleIncorrect(0), 
-                     className: `w-48 h-48 md:w-64 md:h-64 ${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 p-4 ${selectedIncorrect.includes(0) ? 'border-red-500 !border-8' : 'border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
+                     className: `w-48 h-48 md:w-64 md:h-64 ${soundCardStyle} ${currentSound.font} bg-green-200 text-green-800 p-4 ${selectedIncorrect.includes(0) ? 'border-8 border-red-500' : 'border-4 border-gray-700'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
                  }, 
                     React.createElement("span", null, currentSound.text)
                 ),
