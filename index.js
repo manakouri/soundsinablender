@@ -197,7 +197,7 @@ const SoundSetupScreen = ({ settings, setSettings, onStart, onBackToMenu }) => {
 };
 
 const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem, onSwitchMode, onGameOver, onBackToMenu }) => {
-    const [timeLeft, setTimeLeft] = useState(120);
+    const [timeLeft, setTimeLeft] = useState(60);
     const [score, setScore] = useState(0);
     const [totalSeen, setTotalSeen] = useState(0);
     const [incorrectSounds, setIncorrectSounds] = useState([]);
@@ -205,36 +205,56 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
     const [isSplit, setIsSplit] = useState(false);
     
     const gameStateRef = useRef();
-
     useEffect(() => {
-        gameStateRef.current = { score, totalSeen, incorrectSounds, selectedIncorrect, currentWord, currentSound, gameType };
+        // This ref will always have the latest state, preventing stale closures in timers.
+        gameStateRef.current = { score, totalSeen, incorrectSounds, selectedIncorrect, currentWord, currentSound, gameType, gameMode };
     });
 
-    useEffect(() => {
-        if (gameMode === 'skillCheck') {
-            const timerId = window.setInterval(() => {
-                setTimeLeft(prev => {
-                    if (prev <= 1) {
-                        clearInterval(timerId);
-                        const { score, totalSeen, incorrectSounds, selectedIncorrect, currentWord, currentSound, gameType } = gameStateRef.current;
-                        
-                        let finalIncorrectSounds = [...incorrectSounds];
-                        if (selectedIncorrect.length > 0) {
-                            const item = gameType === 'words' ? (currentWord || []).flat() : [currentSound.text];
-                            const incorrect = item.filter((_, i) => selectedIncorrect.includes(i));
-                            finalIncorrectSounds = [...new Set([...incorrectSounds, ...incorrect])];
-                        }
-                        
-                        const finalScore = score + (selectedIncorrect.length === 0 ? 1 : 0);
-                        onGameOver(finalScore, totalSeen + 1, finalIncorrectSounds);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-            return () => clearInterval(timerId);
+    const processCurrentCard = () => {
+        const { selectedIncorrect, gameType, currentWord, currentSound } = gameStateRef.current;
+        let incorrectToAdd = [];
+        let scoreToAdd = 0;
+        let totalSoundsOnCard = 0;
+
+        if (gameType === 'words') {
+            totalSoundsOnCard = (currentWord || []).flat().length;
+        } else {
+            totalSoundsOnCard = currentSound?.text ? 1 : 0;
         }
-    }, [gameMode, onGameOver]);
+
+        if (selectedIncorrect.length === 0) {
+            scoreToAdd = totalSoundsOnCard;
+        } else {
+            const item = gameType === 'words' ? (currentWord || []).flat() : [currentSound?.text].filter(Boolean);
+            incorrectToAdd = item.filter((_, i) => selectedIncorrect.includes(i));
+            scoreToAdd = totalSoundsOnCard - incorrectToAdd.length;
+        }
+        return { scoreToAdd, incorrectToAdd, totalSoundsOnCard };
+    };
+
+    useEffect(() => {
+        if (gameMode !== 'skillCheck') return;
+
+        if (timeLeft <= 0) {
+            const { score, totalSeen, incorrectSounds } = gameStateRef.current;
+            const { incorrectToAdd, totalSoundsOnCard } = processCurrentCard();
+            const correctOnCard = totalSoundsOnCard - incorrectToAdd.length;
+
+            const finalIncorrectSounds = [...new Set([...incorrectSounds, ...incorrectToAdd])];
+            const finalScore = score + correctOnCard;
+            const finalTotal = totalSeen + totalSoundsOnCard;
+            
+            onGameOver(finalScore, finalTotal, finalIncorrectSounds);
+            return; 
+        }
+
+        const timerId = window.setInterval(() => {
+            setTimeLeft(t => t - 1);
+        }, 1000);
+
+        return () => clearInterval(timerId);
+    }, [gameMode, timeLeft, onGameOver]);
+
 
     useEffect(() => {
         setIsSplit(false);
@@ -247,14 +267,10 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
 
     const handleNext = () => {
         if (gameMode === 'skillCheck') {
-            if (selectedIncorrect.length === 0) {
-                setScore(prev => prev + 1);
-            } else {
-                const item = gameType === 'words' ? currentWord.flat() : [currentSound.text];
-                const incorrect = item.filter((_, i) => selectedIncorrect.includes(i));
-                setIncorrectSounds(prev => [...new Set([...prev, ...incorrect])]);
-            }
-            setTotalSeen(prev => prev + 1);
+            const { scoreToAdd, incorrectToAdd, totalSoundsOnCard } = processCurrentCard();
+            setScore(prev => prev + scoreToAdd);
+            if (incorrectToAdd.length > 0) setIncorrectSounds(prev => [...new Set([...prev, ...incorrectToAdd])]);
+            setTotalSeen(prev => prev + totalSoundsOnCard);
         }
         setSelectedIncorrect([]);
         onNextItem();
@@ -265,7 +281,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         setSelectedIncorrect(prev => prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]);
     };
 
-    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center ease-in-out shadow-[8px_8px_0px_#4A5568] transition-transform duration-150";
+    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center ease-in-out shadow-[8px_8px_0px_#4A5568] duration-150";
 
     const renderWord = () => {
         if (!currentWord || !Array.isArray(currentWord) || currentWord.length === 0) return null;
@@ -274,15 +290,13 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         currentWord.forEach((syllable, s_idx) => {
             if (!Array.isArray(syllable)) return;
             syllable.forEach((part, p_idx) => {
-                const colorIndex = p_idx % boxColors.length;
                 const isSelected = selectedIncorrect.includes(globalIndex);
-                const liftStyle = isSelected ? { transform: 'translateY(-8px)' } : {};
+                const colorClass = isSelected ? 'bg-red-400 text-white' : boxColors[p_idx % boxColors.length];
                 
                 wordParts.push(React.createElement("div", {
-                    key: globalIndex,
+                    key: `part-${globalIndex}`, // Stable key based on position
                     onClick: () => toggleIncorrect(globalIndex),
-                    style: liftStyle,
-                    className: `p-4 md:p-6 aspect-square text-5xl md:text-6xl ${flashcardBaseStyle} ${boxColors[colorIndex]} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
+                    className: `p-4 md:p-6 aspect-square text-5xl md:text-6xl ${flashcardBaseStyle} ${colorClass} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}`
                 }, part));
                 globalIndex++;
             });
@@ -307,13 +321,12 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         ),
         gameMode === 'skillCheck' && React.createElement("p", {className: "text-center text-gray-600 mb-2 animate-pulse"}, "Click on any sound you get wrong before hitting the checkmark."),
         React.createElement("div", { className: "text-center font-bold" },
-            gameType === 'words' && React.createElement("div", { className: `flex flex-wrap justify-center items-center gap-2 md:gap-4`}, ...renderWord()),
+            gameType === 'words' && React.createElement("div", { className: `flex flex-wrap justify-center items-stretch gap-2 md:gap-4`}, ...renderWord()),
             gameType === 'sounds' && currentSound && React.createElement("div", { className: "flex items-center justify-center gap-4 md:gap-8" }, 
                  React.createElement("div", { 
-                     key: `sound-card-${totalSeen}`,
+                     key: `sound-card-${totalSeen}`, // Stable key for the current card view
                      onClick: () => toggleIncorrect(0), 
-                     style: selectedIncorrect.includes(0) ? { transform: 'translateY(-8px)' } : {},
-                     className: `w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${flashcardBaseStyle} ${currentSound.font} bg-green-200 text-green-800 ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
+                     className: `w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${flashcardBaseStyle} ${currentSound.font} ${selectedIncorrect.includes(0) ? 'bg-red-400 text-white' : 'bg-green-200 text-green-800'} ${gameMode === 'skillCheck' ? 'cursor-pointer' : ''}` 
                  }, 
                     currentSound.text
                 ),
@@ -337,8 +350,8 @@ const GameOverScreen = ({ onPlayAgain, onPractice, onMySounds, gameType, score, 
         setHighScore(hs);
     }, [gameType]);
 
-    const correct = total > 0 ? total - incorrect.length : 0;
     const numIncorrect = incorrect.length;
+    const correct = score; // Score now represents total correct sounds
 
     return React.createElement("div", { className: "text-center space-y-6" },
         React.createElement("h2", { className: "text-6xl font-bold text-red-500" }, "Time's Up!"),
