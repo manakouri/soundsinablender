@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -258,7 +259,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         if (gameMode !== 'skillCheck') return;
         setSelectedIncorrect(prev => prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]);
     };
-    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center aspect-square shadow-[8px_8px_0px_#4A5568] transition-all";
+    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center aspect-square shadow-[8px_8px_0px_#4A5568]";
     const soundCardStyle = `text-[clamp(3rem,25vw,10rem)] ${flashcardBaseStyle}`;
     const wordCardStyle = `text-[clamp(2rem,12vw,6rem)] ${flashcardBaseStyle}`;
 
