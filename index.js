@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -84,7 +85,7 @@ const GameModeScreen = ({ setScreen }) => {
     );
 };
 
-const WordSetupScreen = ({ settings, setSettings, onStart, onBackToMenu }) => {
+const WordSetupScreen = ({ settings, setSettings, gameMode, setGameMode, onStart, onBackToMenu }) => {
     const handleCheckboxChange = (e, key) => setSettings(prev => ({ ...prev, [key]: e.target.checked }));
     const handleShortVowelMasterChange = (e) => {
         const isChecked = e.target.checked;
@@ -110,6 +111,13 @@ const WordSetupScreen = ({ settings, setSettings, onStart, onBackToMenu }) => {
             React.createElement("h1", { className: "text-4xl md:text-6xl font-bold text-center text-gray-700" }, "Word Blender"),
             React.createElement("button", { onClick: onBackToMenu, title: "Back to Menu", className: "absolute top-1/2 -translate-y-1/2 right-0 p-2 bg-gray-300 text-gray-700 rounded-lg shadow-[4px_4px_0_#2D3748] border-2 border-[#2D3748] hover:bg-gray-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#2D3748]" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" })))
         ),
+         React.createElement("div", { className: "bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-200" },
+            React.createElement("h2", { className: "text-2xl font-bold mb-4 text-center" }, "Choose Mode"),
+             React.createElement("div", { className: "grid grid-cols-2 gap-4" },
+                React.createElement(RadioLabel, { label: "Practice", name: "gameMode", value: "practice", checked: gameMode === 'practice', onChange: (e) => setGameMode(e.target.value) }),
+                React.createElement(RadioLabel, { label: "Skill Check", name: "gameMode", value: "skillCheck", checked: gameMode === 'skillCheck', onChange: (e) => setGameMode(e.target.value) })
+            )
+        ),
         React.createElement("div", { className: "bg-white p-6 md:p-8 rounded-2xl shadow-lg border-2 border-gray-200" },
             React.createElement("h2", { className: "text-2xl font-bold mb-4 text-center" }, "Choose Your Patterns"),
             React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5 text-lg" },
@@ -133,7 +141,7 @@ const WordSetupScreen = ({ settings, setSettings, onStart, onBackToMenu }) => {
                 )
             )
         ),
-        React.createElement(Button, { onClick: () => onStart('words', 'practice'), disabled: isStartDisabled, className: "text-3xl" }, "Start Game")
+        React.createElement(Button, { onClick: () => onStart('words', gameMode), disabled: isStartDisabled, className: "text-3xl" }, "Start Game")
     );
 };
 
@@ -189,34 +197,25 @@ const SoundSetupScreen = ({ settings, setSettings, gameMode, setGameMode, onStar
 const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem, onBackToMenu, onGameOver }) => {
     const [isSplit, setIsSplit] = useState(false);
     const [timeLeft, setTimeLeft] = useState(60);
-    const [isSelected, setIsSelected] = useState(false);
-    const [imageSrc, setImageSrc] = useState(currentSound?.image);
+    const [isSoundSelected, setIsSoundSelected] = useState(false);
+    const [selectedPartIndices, setSelectedPartIndices] = useState([]);
 
     const incorrectSoundsForSession = useRef([]);
-    const latestState = useRef({ isSelected, currentSound });
+    const latestState = useRef({ isSoundSelected, currentSound, selectedPartIndices, currentWord });
 
     useEffect(() => {
-        if (currentSound?.image && currentSound?.keyword) {
-            const cacheKey = `image_cache_${currentSound.keyword}`;
-            const cachedImage = localStorage.getItem(cacheKey);
-            setImageSrc(cachedImage || currentSound.image);
-        } else {
-            setImageSrc(null);
-        }
-    }, [currentSound]);
-
-    useEffect(() => {
-        latestState.current = { isSelected, currentSound };
+        latestState.current = { isSoundSelected, currentSound, selectedPartIndices, currentWord };
     });
     
     useEffect(() => {
         setIsSplit(false);
-        setIsSelected(false);
+        setIsSoundSelected(false);
+        setSelectedPartIndices([]);
     }, [currentWord, currentSound]);
 
     useEffect(() => {
         if (gameMode !== 'skillCheck') {
-            setTimeLeft(60); // Reset timer if we leave skill check mode
+            setTimeLeft(60); 
             return;
         }
 
@@ -224,11 +223,20 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
             setTimeLeft(prevTime => {
                 if (prevTime <= 1) {
                     clearInterval(timerId);
-                    const { isSelected: lastIsSelected, currentSound: lastCurrentSound } = latestState.current;
-                    if (lastIsSelected && lastCurrentSound) {
+                    const { isSoundSelected: lastIsSoundSelected, currentSound: lastCurrentSound, selectedPartIndices: lastSelectedPartIndices, currentWord: lastCurrentWord } = latestState.current;
+                    
+                    if (gameType === 'sounds' && lastIsSoundSelected && lastCurrentSound) {
                         if (!incorrectSoundsForSession.current.includes(lastCurrentSound.text)) {
                             incorrectSoundsForSession.current.push(lastCurrentSound.text);
                         }
+                    } else if (gameType === 'words' && lastSelectedPartIndices.length > 0 && lastCurrentWord) {
+                        const flatWord = lastCurrentWord.flat(Infinity);
+                        lastSelectedPartIndices.forEach(index => {
+                            const incorrectSound = flatWord[index];
+                            if (incorrectSound && !incorrectSoundsForSession.current.includes(incorrectSound)) {
+                                incorrectSoundsForSession.current.push(incorrectSound);
+                            }
+                        });
                     }
                     onGameOver(incorrectSoundsForSession.current);
                     return 0;
@@ -238,27 +246,50 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         }, 1000);
 
         return () => clearInterval(timerId);
-    }, [gameMode, onGameOver]);
+    }, [gameMode, gameType, onGameOver]);
 
     const handleNext = () => {
-        if (gameMode === 'skillCheck' && isSelected && currentSound) {
-            if (!incorrectSoundsForSession.current.includes(currentSound.text)) {
-                 incorrectSoundsForSession.current.push(currentSound.text);
+        if (gameMode === 'skillCheck') {
+            const { isSoundSelected: lastIsSoundSelected, currentSound: lastCurrentSound, selectedPartIndices: lastSelectedPartIndices, currentWord: lastCurrentWord } = latestState.current;
+
+            if (gameType === 'sounds' && lastIsSoundSelected && lastCurrentSound) {
+                if (!incorrectSoundsForSession.current.includes(lastCurrentSound.text)) {
+                     incorrectSoundsForSession.current.push(lastCurrentSound.text);
+                }
+            } else if (gameType === 'words' && lastSelectedPartIndices.length > 0 && lastCurrentWord) {
+                const flatWord = lastCurrentWord.flat(Infinity);
+                lastSelectedPartIndices.forEach(index => {
+                    const incorrectSound = flatWord[index];
+                    if (incorrectSound && !incorrectSoundsForSession.current.includes(incorrectSound)) {
+                        incorrectSoundsForSession.current.push(incorrectSound);
+                    }
+                });
             }
         }
         onNextItem();
     };
     
-    const handleCardClick = () => {
-        if (gameMode === 'skillCheck') {
-            setIsSelected(prev => !prev);
+    const handleSoundCardClick = () => {
+        if (gameMode === 'skillCheck' && gameType === 'sounds') {
+            setIsSoundSelected(prev => !prev);
         }
+    };
+    
+    const handlePartClick = (index) => {
+        if (gameMode !== 'skillCheck' || gameType !== 'words') return;
+        setSelectedPartIndices(prev =>
+            prev.includes(index)
+                ? prev.filter(i => i !== index)
+                : [...prev, index]
+        );
     };
 
     const boxColors = ['bg-rose-200 text-rose-800', 'bg-amber-200 text-amber-800', 'bg-teal-200 text-teal-800', 'bg-sky-200 text-sky-800'];
     const isMultisyllable = Array.isArray(currentWord) && currentWord.length > 1 && Array.isArray(currentWord[0]);
     const isNextDisabled = isMultisyllable && isSplit;
     const flashcardBaseStyle = "rounded-2xl flex items-center justify-center ease-in-out shadow-[8px_8px_0px_#4A5568] duration-150 transition-all";
+    const wordPartBaseStyle = "rounded-2xl flex items-center justify-center ease-in-out shadow-[8px_8px_0px_#4A5568] duration-150";
+
 
     const renderWord = () => {
         if (!currentWord || !Array.isArray(currentWord) || currentWord.length === 0) return null;
@@ -267,9 +298,22 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         currentWord.forEach((syllable, s_idx) => {
             if (!Array.isArray(syllable)) return;
             syllable.forEach((part, p_idx) => {
-                const colorClass = boxColors[p_idx % boxColors.length];
-                const finalClassName = `${flashcardBaseStyle} p-4 md:p-6 aspect-square text-5xl md:text-6xl ${colorClass}`;
-                wordParts.push(React.createElement("div", { key: `part-${globalIndex}`, className: finalClassName }, part));
+                const isPartSelected = gameMode === 'skillCheck' && selectedPartIndices.includes(globalIndex);
+                let colorClass = boxColors[p_idx % boxColors.length];
+                if(isPartSelected) {
+                    colorClass = 'bg-red-400 text-white';
+                }
+                
+                let finalClassName = `${wordPartBaseStyle} p-4 md:p-6 aspect-square text-5xl md:text-6xl ${colorClass}`;
+                if (gameMode === 'skillCheck') {
+                    finalClassName += ' cursor-pointer';
+                }
+
+                wordParts.push(React.createElement("div", { 
+                    key: `part-${globalIndex}`, 
+                    className: finalClassName,
+                    onClick: () => handlePartClick(globalIndex)
+                }, part));
                 globalIndex++;
             });
             if (isSplit && s_idx < currentWord.length - 1) {
@@ -283,7 +327,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         let style = `${flashcardBaseStyle} w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${currentSound.font}`;
         if (gameMode === 'skillCheck') {
             style += ' cursor-pointer';
-            if (isSelected) {
+            if (isSoundSelected) {
                 style += ' bg-red-400 text-white';
             } else {
                  style += ' bg-green-200 text-green-800';
@@ -306,10 +350,10 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                  React.createElement("div", { 
                      key: `sound-card-${currentSound.text}`,
                      className: getSoundCardStyle(),
-                     onClick: handleCardClick
+                     onClick: handleSoundCardClick
                  }, currentSound.text),
                 currentSound.image && React.createElement("div", { key: `sound-image-${currentSound.text}`, className: `w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-gray-700 shadow-[8px_8px_0px_#4A5568] bg-white p-4`},
-                    React.createElement("img", { src: imageSrc, alt: currentSound.keyword, className: "w-full h-full object-contain" })
+                    React.createElement("img", { src: currentSound.image, alt: currentSound.keyword, className: "w-full h-full object-contain" })
                 )
             )
         ),
@@ -336,7 +380,6 @@ const GameOverScreen = ({ incorrectSounds, onStartMySounds, onGoToSoundSetup, on
 const MySoundsScreen = ({ mySoundsDeck, onBackToMenu }) => {
     const [shuffledDeck, setShuffledDeck] = useState([]);
     const [soundIndex, setSoundIndex] = useState(0);
-    const [imageSrc, setImageSrc] = useState(null);
 
     useEffect(() => {
         if (mySoundsDeck && mySoundsDeck.length > 0) {
@@ -360,16 +403,6 @@ const MySoundsScreen = ({ mySoundsDeck, onBackToMenu }) => {
         return { text, font, image: vowelInfo?.image, keyword: vowelInfo?.keyword };
     })();
     
-     useEffect(() => {
-        if (currentSoundInfo?.image && currentSoundInfo?.keyword) {
-            const cacheKey = `image_cache_${currentSoundInfo.keyword}`;
-            const cachedImage = localStorage.getItem(cacheKey);
-            setImageSrc(cachedImage || currentSoundInfo.image);
-        } else {
-            setImageSrc(null);
-        }
-    }, [currentSoundInfo]);
-
     const handleNextSound = () => {
         if (shuffledDeck.length > 0) {
             setSoundIndex(prev => (prev + 1) % shuffledDeck.length);
@@ -386,7 +419,7 @@ const MySoundsScreen = ({ mySoundsDeck, onBackToMenu }) => {
         React.createElement("div", { className: "flex items-center justify-center gap-4 md:gap-8" },
             React.createElement("div", { className: `${flashcardBaseStyle} w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${currentSoundInfo.font} bg-orange-200 text-orange-800` }, currentSoundInfo.text),
             currentSoundInfo.image && React.createElement("div", { className: `w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-gray-700 shadow-[8px_8px_0px_#4A5568] bg-white p-4` },
-                React.createElement("img", { src: imageSrc, alt: currentSoundInfo.keyword, className: "w-full h-full object-contain" })
+                React.createElement("img", { src: currentSoundInfo.image, alt: currentSoundInfo.keyword, className: "w-full h-full object-contain" })
             )
         ),
         React.createElement("div", { className: "mt-8" },
@@ -498,27 +531,11 @@ const App = () => {
     }, [wordSettings]);
 
     useEffect(() => {
-        const preloadImages = async () => {
-            for (const item of patterns.sound_shortVowels_with_images) {
-                const cacheKey = `image_cache_${item.keyword}`;
-                if (!localStorage.getItem(cacheKey)) {
-                    try {
-                        const response = await fetch(item.image);
-                        if (!response.ok) throw new Error(`Failed to fetch ${item.image}`);
-                        const blob = await response.blob();
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            const base64data = reader.result;
-                            if (typeof base64data === 'string') {
-                                localStorage.setItem(cacheKey, base64data);
-                            }
-                        };
-                        reader.readAsDataURL(blob);
-                    } catch (error) {
-                        console.error("Failed to preload image:", error);
-                    }
-                }
-            }
+        const preloadImages = () => {
+            patterns.sound_shortVowels_with_images.forEach(item => {
+                const img = new Image();
+                img.src = item.image;
+            });
         };
         preloadImages();
     }, []);
@@ -568,7 +585,7 @@ const App = () => {
     const renderScreen = () => {
         switch (screen) {
             case 'gameMode': return React.createElement(GameModeScreen, { setScreen: setScreen });
-            case 'wordSetup': return React.createElement(WordSetupScreen, { settings: wordSettings, setSettings: setWordSettings, onStart: handleStartGame, onBackToMenu: handleBackToMenu });
+            case 'wordSetup': return React.createElement(WordSetupScreen, { settings: wordSettings, setSettings: setWordSettings, gameMode: gameMode, setGameMode: setGameMode, onStart: handleStartGame, onBackToMenu: handleBackToMenu });
             case 'soundSetup': return React.createElement(SoundSetupScreen, { settings: soundSettings, setSettings: setSoundSettings, gameMode: gameMode, setGameMode: setGameMode, onStart: handleStartGame, onBackToMenu: handleBackToMenu });
             case 'game': return React.createElement(GameScreen, { gameType: gameType, gameMode: gameMode, currentWord: currentWord, currentSound: currentSound, onNextItem: handleNextItem, onBackToMenu: handleBackToMenu, onGameOver: handleGameOver });
             case 'gameOver': return React.createElement(GameOverScreen, { incorrectSounds: mySoundsDeck, onStartMySounds: () => setScreen('mySounds'), onGoToSoundSetup: () => setScreen('soundSetup'), onGoToWordSetup: () => setScreen('wordSetup') });
