@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -24,7 +25,7 @@ const patterns = {
         { sound: 'o', image: 'https://i.ibb.co/Q3MPBkJv/orange-o.png', keyword: 'orange' },
         { sound: 'u', image: 'https://i.ibb.co/fd1Vtbvd/umbrella-u.png', keyword: 'umbrella' }
     ],
-    sound_commonLongVowels: ['ai', 'ay', 'ee', 'ea', 'ou', 'ow', 'igh', 'oi', 'oy'],
+    sound_commonLongVowels: ['ai', 'ay', 'ee', 'ea', 'ou', 'ow', 'igh', 'oi', 'oy', 'a_e', 'e_e', 'i_e', 'o_e', 'u_e'],
     sound_rControlled: ['ar', 'er', 'ir', 'ur', 'or'],
     sound_lessCommonVowels: ['oo', 'ea', 'ey', 'y', 'ie', 'oe', 'ew', 'ue']
 };
@@ -44,7 +45,8 @@ const Button = ({ children = null, variant = 'primary', className = '', disabled
     const variantStyles = {
         primary: "bg-green-600 hover:bg-green-700",
         secondary: "bg-blue-500 hover:bg-blue-600",
-        special: "bg-orange-500 hover:bg-orange-600"
+        special: "bg-orange-500 hover:bg-orange-600",
+        neutral: "bg-gray-500 hover:bg-gray-600"
     };
     return React.createElement("button", { className: `${baseStyle} ${variantStyles[variant]} ${className}`, disabled: disabled, ...props }, children);
 };
@@ -230,8 +232,8 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         return () => clearInterval(timerId);
     }, [gameMode, onGameOver]);
 
-    const handleDragStart = (e, sound, index) => {
-        const payload = JSON.stringify({ sound, index });
+    const handleDragStart = (e, sound, index, context) => {
+        const payload = JSON.stringify({ sound, index, context });
         e.dataTransfer.setData("application/json", payload);
     };
 
@@ -242,10 +244,20 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
     const handleDrop = (e) => {
         e.preventDefault();
         const payload = JSON.parse(e.dataTransfer.getData("application/json"));
-        const { sound, index } = payload;
+        const { sound, index, context } = payload;
         
-        if (!incorrectSoundsForSession.current.includes(sound)) {
-            incorrectSoundsForSession.current.push(sound);
+        let soundToAdd = sound;
+        if (context) { // It's a word part
+            const syllable = currentWord[context.syllableIndex];
+            const isVowelPart = patterns.vowels.includes(sound);
+            const hasSilentE = syllable.length === 4 && syllable[3] === 'e';
+            if (isVowelPart && hasSilentE) {
+                soundToAdd = `${sound}_e`;
+            }
+        }
+        
+        if (!incorrectSoundsForSession.current.includes(soundToAdd)) {
+            incorrectSoundsForSession.current.push(soundToAdd);
         }
         
         if (index !== undefined && index !== null) {
@@ -254,7 +266,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
             setIsSoundDropped(true);
         }
         
-        setDroppedSoundsOnScreen(prev => [...prev, sound]);
+        setDroppedSoundsOnScreen(prev => [...prev, soundToAdd]);
     };
 
     const boxColors = ['bg-rose-200 text-rose-800', 'bg-amber-200 text-amber-800', 'bg-teal-200 text-teal-800', 'bg-sky-200 text-sky-800'];
@@ -284,7 +296,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                     key: `part-${globalIndex}`, 
                     className: finalClassName,
                     draggable: isDraggable,
-                    onDragStart: (e) => handleDragStart(e, part, globalIndex)
+                    onDragStart: (e) => handleDragStart(e, part, globalIndex, { syllableIndex: s_idx })
                 }, part));
                 globalIndex++;
             });
@@ -321,7 +333,7 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
                          key: `sound-card-${currentSound.text}`,
                          className: getSoundCardStyle(),
                          draggable: gameMode === 'skillCheck' && !isSoundDropped,
-                         onDragStart: (e) => handleDragStart(e, currentSound.text, null)
+                         onDragStart: (e) => handleDragStart(e, currentSound.text, null, null)
                      }, currentSound.text),
                     currentSound.image && React.createElement("div", { key: `sound-image-${currentSound.text}`, className: `w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-gray-700 shadow-[8px_8px_0px_#4A5568] bg-white p-4`},
                         React.createElement("img", { src: currentSound.image, alt: currentSound.keyword, className: "w-full h-full object-contain" })
@@ -351,14 +363,15 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
     );
 };
 
-const GameOverScreen = ({ incorrectSounds, onStartMySounds, onGoToSoundSetup, onGoToWordSetup }) => {
+const GameOverScreen = ({ incorrectSounds, onStartMySounds, onGoToSoundSetup, onGoToWordSetup, onBackToMenu }) => {
     return React.createElement("div", { className: "text-center space-y-8 animate-fade-in" },
         React.createElement("h1", { className: "text-6xl md:text-8xl font-bold text-gray-700" }, "Time's Up!"),
-        React.createElement("p", { className: "text-2xl text-gray-600" }, `You identified ${incorrectSounds.length} sounds for focused practice.`),
+        React.createElement("p", { className: "text-2xl text-gray-600" }, "Let's practice the sounds you found tricky."),
         React.createElement("div", { className: "max-w-md mx-auto space-y-4" },
             React.createElement(Button, { variant: "special", onClick: onStartMySounds, disabled: incorrectSounds.length === 0 }, "My Sounds"),
-            React.createElement(Button, { variant: "secondary", onClick: onGoToSoundSetup }, "Practice Mode"),
-            React.createElement(Button, { variant: "primary", onClick: onGoToWordSetup }, "Word Builder")
+            React.createElement(Button, { variant: "primary", onClick: onGoToWordSetup }, "Word Builder"),
+            React.createElement(Button, { variant: "secondary", onClick: onGoToSoundSetup }, "Sound Pack"),
+            React.createElement(Button, { variant: "neutral", onClick: onBackToMenu }, "Home")
         )
     );
 };
@@ -478,18 +491,18 @@ const App = () => {
                 part1 = getRandomElement(pool1);
                 part2 = getRandomElement(pool2);
                 const consonantsForPool3 = patterns.consonants.filter(c => !['y', 'w', 'h', 'j', 'r'].includes(c));
-                const isLongVowel = patterns.longVowels.includes(part2);
+                const isShortVowel = patterns.vowels.includes(part2);
                 const pool3 = [...consonantsForPool3];
                 if (wordSettings.digraphs) pool3.push('ng');
-                if (wordSettings.floss && !isLongVowel) pool3.push(...patterns.floss);
-                if (wordSettings.longConsonants && !isLongVowel) pool3.push(...patterns.longConsonants);
+                if (wordSettings.floss && !isShortVowel) pool3.push(...patterns.floss);
+                if (wordSettings.longConsonants && !isShortVowel) pool3.push(...patterns.longConsonants);
                 if (wordSettings.finalBlends) {
                     let finalBlendsToAdd = patterns.finalBlends.filter(b => b !== 'rt');
-                    if (isLongVowel) finalBlendsToAdd = finalBlendsToAdd.filter(b => !['rt', 'mp', 'pt'].includes(b));
+                    if (!isShortVowel) finalBlendsToAdd = finalBlendsToAdd.filter(b => !['rt', 'mp', 'pt'].includes(b));
                     pool3.push(...finalBlendsToAdd);
                 }
                 part3 = ''; part4 = '';
-                if (wordSettings.silentE && patterns.vowels.includes(part2) && Math.random() < 0.4) {
+                if (wordSettings.silentE && isShortVowel && Math.random() < 0.4) {
                     const singleConsonantPool = pool3.filter(p => consonantsForPool3.includes(p));
                     if (singleConsonantPool.length > 0) {
                         part3 = getRandomElement(singleConsonantPool);
@@ -497,8 +510,21 @@ const App = () => {
                     }
                 }
                 if (part3 === '') {
-                    const safePool3 = pool3.filter(p => !['f', 'l', 's', 'z', 'c', 'v'].includes(p) && p);
-                    part3 = getRandomElement(safePool3.length > 0 ? safePool3 : pool3.filter(p => p));
+                    let finalPool3 = pool3.filter(p => p);
+                    if (isShortVowel) {
+                        const flossViolations = ['f', 'l', 's', 'z'];
+                        finalPool3 = finalPool3.filter(p => !flossViolations.includes(p));
+                    }
+                    const otherForbiddenEndings = ['c', 'v'];
+                    let safePool3 = finalPool3.filter(p => !otherForbiddenEndings.includes(p));
+                    if (safePool3.length === 0) {
+                        safePool3 = finalPool3;
+                    }
+                    if (safePool3.length > 0) {
+                        part3 = getRandomElement(safePool3);
+                    } else {
+                        part3 = getRandomElement(consonantsForPool3);
+                    }
                     part4 = '';
                 }
                 part1 = part1 || ''; part2 = part2 || ''; part3 = part3 || '';
@@ -574,7 +600,7 @@ const App = () => {
             case 'wordSetup': return React.createElement(WordSetupScreen, { settings: wordSettings, setSettings: setWordSettings, gameMode: gameMode, setGameMode: setGameMode, onStart: handleStartGame, onBackToMenu: handleBackToMenu });
             case 'soundSetup': return React.createElement(SoundSetupScreen, { settings: soundSettings, setSettings: setSoundSettings, gameMode: gameMode, setGameMode: setGameMode, onStart: handleStartGame, onBackToMenu: handleBackToMenu });
             case 'game': return React.createElement(GameScreen, { gameType: gameType, gameMode: gameMode, currentWord: currentWord, currentSound: currentSound, onNextItem: handleNextItem, onBackToMenu: handleBackToMenu, onGameOver: handleGameOver });
-            case 'gameOver': return React.createElement(GameOverScreen, { incorrectSounds: mySoundsDeck, onStartMySounds: () => setScreen('mySounds'), onGoToSoundSetup: () => setScreen('soundSetup'), onGoToWordSetup: () => setScreen('wordSetup') });
+            case 'gameOver': return React.createElement(GameOverScreen, { incorrectSounds: mySoundsDeck, onStartMySounds: () => setScreen('mySounds'), onGoToSoundSetup: () => setScreen('soundSetup'), onGoToWordSetup: () => setScreen('wordSetup'), onBackToMenu: handleBackToMenu });
             case 'mySounds': return React.createElement(MySoundsScreen, { mySoundsDeck: mySoundsDeck, onBackToMenu: handleBackToMenu });
             default: return React.createElement(GameModeScreen, { setScreen: setScreen });
         }
