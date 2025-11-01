@@ -197,20 +197,17 @@ const SoundSetupScreen = ({ settings, setSettings, gameMode, setGameMode, onStar
 const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem, onBackToMenu, onGameOver }) => {
     const [isSplit, setIsSplit] = useState(false);
     const [timeLeft, setTimeLeft] = useState(60);
-    const [isSoundSelected, setIsSoundSelected] = useState(false);
-    const [selectedPartIndices, setSelectedPartIndices] = useState([]);
+    const [droppedIndices, setDroppedIndices] = useState([]);
+    const [isSoundDropped, setIsSoundDropped] = useState(false);
+    const [droppedSoundsOnScreen, setDroppedSoundsOnScreen] = useState([]);
 
     const incorrectSoundsForSession = useRef([]);
-    const latestState = useRef({ isSoundSelected, currentSound, selectedPartIndices, currentWord });
-
-    useEffect(() => {
-        latestState.current = { isSoundSelected, currentSound, selectedPartIndices, currentWord };
-    });
     
     useEffect(() => {
         setIsSplit(false);
-        setIsSoundSelected(false);
-        setSelectedPartIndices([]);
+        setDroppedIndices([]);
+        setIsSoundDropped(false);
+        setDroppedSoundsOnScreen([]);
     }, [currentWord, currentSound]);
 
     useEffect(() => {
@@ -223,21 +220,6 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
             setTimeLeft(prevTime => {
                 if (prevTime <= 1) {
                     clearInterval(timerId);
-                    const { isSoundSelected: lastIsSoundSelected, currentSound: lastCurrentSound, selectedPartIndices: lastSelectedPartIndices, currentWord: lastCurrentWord } = latestState.current;
-                    
-                    if (gameType === 'sounds' && lastIsSoundSelected && lastCurrentSound) {
-                        if (!incorrectSoundsForSession.current.includes(lastCurrentSound.text)) {
-                            incorrectSoundsForSession.current.push(lastCurrentSound.text);
-                        }
-                    } else if (gameType === 'words' && lastSelectedPartIndices.length > 0 && lastCurrentWord) {
-                        const flatWord = lastCurrentWord.flat(Infinity);
-                        lastSelectedPartIndices.forEach(index => {
-                            const incorrectSound = flatWord[index];
-                            if (incorrectSound && !incorrectSoundsForSession.current.includes(incorrectSound)) {
-                                incorrectSoundsForSession.current.push(incorrectSound);
-                            }
-                        });
-                    }
                     onGameOver(incorrectSoundsForSession.current);
                     return 0;
                 }
@@ -246,49 +228,40 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         }, 1000);
 
         return () => clearInterval(timerId);
-    }, [gameMode, gameType, onGameOver]);
+    }, [gameMode, onGameOver]);
 
-    const handleNext = () => {
-        if (gameMode === 'skillCheck') {
-            const { isSoundSelected: lastIsSoundSelected, currentSound: lastCurrentSound, selectedPartIndices: lastSelectedPartIndices, currentWord: lastCurrentWord } = latestState.current;
+    const handleDragStart = (e, sound, index) => {
+        const payload = JSON.stringify({ sound, index });
+        e.dataTransfer.setData("application/json", payload);
+    };
 
-            if (gameType === 'sounds' && lastIsSoundSelected && lastCurrentSound) {
-                if (!incorrectSoundsForSession.current.includes(lastCurrentSound.text)) {
-                     incorrectSoundsForSession.current.push(lastCurrentSound.text);
-                }
-            } else if (gameType === 'words' && lastSelectedPartIndices.length > 0 && lastCurrentWord) {
-                const flatWord = lastCurrentWord.flat(Infinity);
-                lastSelectedPartIndices.forEach(index => {
-                    const incorrectSound = flatWord[index];
-                    if (incorrectSound && !incorrectSoundsForSession.current.includes(incorrectSound)) {
-                        incorrectSoundsForSession.current.push(incorrectSound);
-                    }
-                });
-            }
-        }
-        onNextItem();
+    const handleDragOver = (e) => {
+        e.preventDefault();
     };
-    
-    const handleSoundCardClick = () => {
-        if (gameMode === 'skillCheck' && gameType === 'sounds') {
-            setIsSoundSelected(prev => !prev);
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        const payload = JSON.parse(e.dataTransfer.getData("application/json"));
+        const { sound, index } = payload;
+        
+        if (!incorrectSoundsForSession.current.includes(sound)) {
+            incorrectSoundsForSession.current.push(sound);
         }
-    };
-    
-    const handlePartClick = (index) => {
-        if (gameMode !== 'skillCheck' || gameType !== 'words') return;
-        setSelectedPartIndices(prev =>
-            prev.includes(index)
-                ? prev.filter(i => i !== index)
-                : [...prev, index]
-        );
+        
+        if (index !== undefined && index !== null) {
+            setDroppedIndices(prev => [...prev, index]);
+        } else {
+            setIsSoundDropped(true);
+        }
+        
+        setDroppedSoundsOnScreen(prev => [...prev, sound]);
     };
 
     const boxColors = ['bg-rose-200 text-rose-800', 'bg-amber-200 text-amber-800', 'bg-teal-200 text-teal-800', 'bg-sky-200 text-sky-800'];
     const isMultisyllable = Array.isArray(currentWord) && currentWord.length > 1 && Array.isArray(currentWord[0]);
     const isNextDisabled = isMultisyllable && isSplit;
-    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center ease-in-out shadow-[8px_8px_0px_#4A5568] duration-150 transition-all";
-    const wordPartBaseStyle = "rounded-2xl flex items-center justify-center ease-in-out shadow-[8px_8px_0px_#4A5568] duration-150";
+    const flashcardBaseStyle = "rounded-2xl flex items-center justify-center ease-in-out shadow-[8px_8px_0px_#4A5568] transition-opacity";
+    const wordPartBaseStyle = "rounded-2xl flex items-center justify-center ease-in-out shadow-[8px_8px_0px_#4A5568] transition-opacity";
 
 
     const renderWord = () => {
@@ -298,21 +271,20 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
         currentWord.forEach((syllable, s_idx) => {
             if (!Array.isArray(syllable)) return;
             syllable.forEach((part, p_idx) => {
-                const isPartSelected = gameMode === 'skillCheck' && selectedPartIndices.includes(globalIndex);
+                const isDropped = droppedIndices.includes(globalIndex);
                 let colorClass = boxColors[p_idx % boxColors.length];
-                if(isPartSelected) {
-                    colorClass = 'bg-red-400 text-white';
-                }
+                let finalClassName = `${wordPartBaseStyle} p-4 md:p-6 aspect-square text-5xl md:text-6xl ${colorClass} ${isDropped ? 'opacity-40' : ''}`;
                 
-                let finalClassName = `${wordPartBaseStyle} p-4 md:p-6 aspect-square text-5xl md:text-6xl ${colorClass}`;
-                if (gameMode === 'skillCheck') {
-                    finalClassName += ' cursor-pointer';
+                const isDraggable = gameMode === 'skillCheck' && !isDropped;
+                if (isDraggable) {
+                   finalClassName += ' cursor-grab';
                 }
 
                 wordParts.push(React.createElement("div", { 
                     key: `part-${globalIndex}`, 
                     className: finalClassName,
-                    onClick: () => handlePartClick(globalIndex)
+                    draggable: isDraggable,
+                    onDragStart: (e) => handleDragStart(e, part, globalIndex)
                 }, part));
                 globalIndex++;
             });
@@ -324,43 +296,57 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
     };
     
     const getSoundCardStyle = () => {
-        let style = `${flashcardBaseStyle} w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${currentSound.font}`;
-        if (gameMode === 'skillCheck') {
-            style += ' cursor-pointer';
-            if (isSoundSelected) {
-                style += ' bg-red-400 text-white';
-            } else {
-                 style += ' bg-green-200 text-green-800';
-            }
-        } else {
-            style += ' bg-green-200 text-green-800';
+        let style = `${flashcardBaseStyle} w-48 h-48 md:w-64 md:h-64 text-8xl md:text-9xl ${currentSound.font} bg-green-200 text-green-800`;
+        const isDraggable = gameMode === 'skillCheck' && !isSoundDropped;
+        if (isDraggable) {
+             style += ' cursor-grab';
+        }
+        if (isSoundDropped) {
+             style += ' opacity-40';
         }
         return style;
     };
 
-    return React.createElement("div", { className: "space-y-4" },
-        React.createElement("div", { className: "flex justify-between items-center gap-2 mb-2" },
-            gameMode === 'skillCheck' && React.createElement("div", { className: "text-2xl font-bold text-blue-600 bg-white px-4 py-2 rounded-lg shadow-md border-2 border-gray-300" }, `Time: ${timeLeft}`),
-            React.createElement("button", { onClick: onBackToMenu, title: "Back to Menu", className: "p-2 bg-gray-300 text-gray-700 rounded-lg shadow-[4px_4px_0_#2D3748] border-2 border-[#2D3748] hover:bg-gray-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#2D3748]" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" })))
-        ),
-         gameMode === 'skillCheck' && React.createElement("p", {className: "text-center text-gray-500 italic"}, "Click any sounds read incorrectly."),
-        React.createElement("div", { className: "text-center font-bold" },
-            gameType === 'words' && React.createElement("div", { className: `flex flex-wrap justify-center items-stretch gap-2 md:gap-4`}, ...renderWord()),
-            gameType === 'sounds' && currentSound && React.createElement("div", { className: "flex items-center justify-center gap-4 md:gap-8" }, 
-                 React.createElement("div", { 
-                     key: `sound-card-${currentSound.text}`,
-                     className: getSoundCardStyle(),
-                     onClick: handleSoundCardClick
-                 }, currentSound.text),
-                currentSound.image && React.createElement("div", { key: `sound-image-${currentSound.text}`, className: `w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-gray-700 shadow-[8px_8px_0px_#4A5568] bg-white p-4`},
-                    React.createElement("img", { src: currentSound.image, alt: currentSound.keyword, className: "w-full h-full object-contain" })
+    return React.createElement("div", { className: "flex flex-col h-full" },
+        React.createElement("div", { className: "space-y-4 flex-grow" },
+            React.createElement("div", { className: "flex justify-between items-center gap-2 mb-2" },
+                gameMode === 'skillCheck' && React.createElement("div", { className: "text-2xl font-bold text-blue-600 bg-white px-4 py-2 rounded-lg shadow-md border-2 border-gray-300" }, `Time: ${timeLeft}`),
+                React.createElement("button", { onClick: onBackToMenu, title: "Back to Menu", className: "p-2 bg-gray-300 text-gray-700 rounded-lg shadow-[4px_4px_0_#2D3748] border-2 border-[#2D3748] hover:bg-gray-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#2D3748]" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" })))
+            ),
+             gameMode === 'skillCheck' && React.createElement("p", {className: "text-center text-gray-500 italic"}, "Drag any incorrect sounds into the 'My Sounds' box below."),
+            React.createElement("div", { className: "text-center font-bold flex-grow min-h-[300px] flex items-center justify-center" },
+                gameType === 'words' && React.createElement("div", { className: `flex flex-wrap justify-center items-stretch gap-2 md:gap-4`}, ...renderWord()),
+                gameType === 'sounds' && currentSound && React.createElement("div", { className: "flex items-center justify-center gap-4 md:gap-8" }, 
+                     React.createElement("div", { 
+                         key: `sound-card-${currentSound.text}`,
+                         className: getSoundCardStyle(),
+                         draggable: gameMode === 'skillCheck' && !isSoundDropped,
+                         onDragStart: (e) => handleDragStart(e, currentSound.text, null)
+                     }, currentSound.text),
+                    currentSound.image && React.createElement("div", { key: `sound-image-${currentSound.text}`, className: `w-48 h-48 md:w-64 md:h-64 rounded-2xl border-4 border-gray-700 shadow-[8px_8px_0px_#4A5568] bg-white p-4`},
+                        React.createElement("img", { src: currentSound.image, alt: currentSound.keyword, className: "w-full h-full object-contain" })
+                    )
                 )
+            ),
+            isMultisyllable && React.createElement(Button, { onClick: () => setIsSplit(p => !p), variant: "special", className: "!py-2 !text-lg max-w-xs mx-auto mt-4" }, isSplit ? "Join" : "Split")
+        ),
+         gameMode === 'skillCheck' && React.createElement("div", { 
+             className: "mt-4 p-4 border-4 border-dashed border-orange-400 rounded-2xl bg-orange-50 min-h-[120px] flex flex-col",
+             onDragOver: handleDragOver,
+             onDrop: handleDrop
+            },
+            React.createElement("h3", {className: "text-center font-bold text-orange-600 text-lg mb-2"}, "My Sounds Practice"),
+            React.createElement("div", { className: "flex flex-wrap gap-2 justify-center flex-grow items-center"},
+                droppedSoundsOnScreen.length === 0 && React.createElement("p", {className: "text-gray-400"}, "Drop sounds here..."),
+                droppedSoundsOnScreen.map((sound, index) => React.createElement("div", {
+                    key: `dropped-${sound}-${index}`,
+                    className: "bg-orange-200 text-orange-800 font-bold p-2 rounded-lg text-xl"
+                }, sound))
             )
         ),
-        isMultisyllable && React.createElement(Button, { onClick: () => setIsSplit(p => !p), variant: "special", className: "!py-2 !text-lg max-w-xs mx-auto mt-4" }, isSplit ? "Join" : "Split"),
         React.createElement("div", { className: "mt-8" },
             isNextDisabled && React.createElement("p", {className: "text-center text-red-500 mb-2 animate-pulse"}, "Please join the word before continuing."),
-            React.createElement(Button, { onClick: handleNext, variant: "secondary", disabled: isNextDisabled }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-12 w-12 mx-auto", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 13l4 4L19 7" })))
+            React.createElement(Button, { onClick: onNextItem, variant: "secondary", disabled: isNextDisabled }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-12 w-12 mx-auto", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M5 13l4 4L19 7" })))
         )
     );
 };
