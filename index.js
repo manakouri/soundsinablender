@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -452,7 +453,6 @@ const SyllableSpyScreen = ({ word, onNextWord, onBackToMenu }) => {
     const [isAnalysisMode, setIsAnalysisMode] = useState(false);
     const [analysisStep, setAnalysisStep] = useState(0);
     const [revealedSyllables, setRevealedSyllables] = useState({});
-    const [notFoundChecked, setNotFoundChecked] = useState(false);
     const [isJoined, setIsJoined] = useState(true);
     const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
 
@@ -466,10 +466,6 @@ const SyllableSpyScreen = ({ word, onNextWord, onBackToMenu }) => {
         setIsAnalysisComplete(false);
     }, [word]);
     
-    useEffect(() => {
-        setNotFoundChecked(false);
-    }, [analysisStep]);
-
     useEffect(() => {
         if (word && analysisStep >= revlocOrder.length && !isAnalysisComplete) {
             const finalRevealed = { ...revealedSyllables };
@@ -498,13 +494,8 @@ const SyllableSpyScreen = ({ word, onNextWord, onBackToMenu }) => {
         }
     };
 
-    const handleNotFoundChange = (e) => {
-        const isChecked = e.target.checked;
-        setNotFoundChecked(isChecked);
-        if (isChecked) {
-            // Use a timeout to allow the user to see the check before moving on
-            setTimeout(() => setAnalysisStep(prev => prev + 1), 300);
-        }
+    const handleSkipStep = () => {
+        setAnalysisStep(prev => prev + 1);
     };
     
     const handleNextStep = () => {
@@ -515,7 +506,6 @@ const SyllableSpyScreen = ({ word, onNextWord, onBackToMenu }) => {
         if (!word) return null;
     
         const wordElements = [];
-        let previousPartWasJoined = true; 
         
         const syllableChunks = word.syllables.reduce((acc, syllable, index) => {
             const isRevealed = !!revealedSyllables[index];
@@ -577,14 +567,15 @@ const SyllableSpyScreen = ({ word, onNextWord, onBackToMenu }) => {
                  React.createElement('p', {className: 'text-lg mb-2 text-gray-600'}, 'Find the syllable that is:'),
                  React.createElement('p', { className: `text-3xl ${colors.text}` }, currentType)
             ),
-             React.createElement('div', { className: 'mt-4 flex justify-center items-center gap-x-6' },
-                React.createElement('label', { className: 'flex items-center gap-2 cursor-pointer text-gray-600' },
-                    React.createElement('input', { type: 'checkbox', onChange: handleNotFoundChange, checked: notFoundChecked, className: 'h-5 w-5' }),
-                    "Not Found / Skip"
-                ),
+             React.createElement('div', { className: 'mt-4 grid grid-cols-2 gap-4' },
+                React.createElement(Button, {
+                    variant: 'neutral',
+                    className: '!py-3 !text-lg',
+                    onClick: handleSkipStep
+                }, "Not Found / Skip"),
                 React.createElement(Button, {
                     variant: 'secondary',
-                    className: '!py-2 !text-lg',
+                    className: '!py-3 !text-lg',
                     onClick: handleNextStep,
                     disabled: !hasFoundCurrentType
                 }, "Next Step")
