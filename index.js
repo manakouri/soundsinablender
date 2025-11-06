@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -37,6 +36,58 @@ const forbiddenCombinations = [
 
 const fonts = ['font-poppins', 'font-nunito', 'font-lexend', 'font-comic-neue', 'font-dyslexiclogic'];
 const bdpqFonts = ['font-poppins', 'font-nunito', 'font-schoolbell', 'font-patrick-hand', 'font-opendyslexic', 'font-dyslexiclogic'];
+
+const syllableDatabase = {
+    'Closed': {
+        initial: ['sub', 'con', 'mis', 'in', 'un', 'dis', 'ex', 'per', 'ob', 'ad', 'mag', 'fan', 'tas', 'tic'],
+        any: ['tend', 'rupt', 'sist', 'cept', 'ject', 'mand', 'vent', 'dict', 'spect', 'tract', 'net', 'bot'],
+        final: ['mit', 'pel', 'fect', 'struct', 'sert', 'port', 'pend', 'lect', 'graph', 'sist', 'ic', 'et', 'ic']
+    },
+    'Open': {
+        initial: ['pro', 're', 'de', 'pre', 'be', 'a', 'e', 'o', 'i'],
+        any: ['la', 'si', 'tu', 'bra', 'cro', 'do', 'fi', 'ho', 'cu', 'no', 'lo', 'ma'],
+        final: ['go', 'me', 'she', 'we', 'hi', 'so', 'by', 'my', 'flu', 'cry']
+    },
+    'VCE': { // Vowel-Consonant-e
+        initial: ['lite', 'pete', 'plode', 'spire', 'flate', 'pose'],
+        any: ['flate', 'pose', 'sume', 'pete', 'vade', 'clude', 'mise', 'dine', 'cope', 'rine'],
+        final: ['plete', 'scribe', 'spire', 'flate', 'bute', 'tude', 'cute', 'prive', 'voke']
+    },
+    'R-Controlled': {
+        initial: ['for', 'per', 'mar', 'sur', 'ter', 'ar'],
+        any: ['ver', 'gar', 'ther', 'lar', 'bor', 'cur', 'tir', 'port'],
+        final: ['form', 'port', 'sert', 'vert', 'cur', 'firm', 'burn', 'star', 'ner']
+    },
+    'Vowel Team': {
+        initial: ['out', 'east', 'aim', 'aud', 'ound', 'eat', 'float'],
+        any: ['tain', 'gree', 'join', 'bout', 'peal', 'noy', 'void', 'cau', 'flee', 'main'],
+        final: ['claim', 'peal', 'found', 'ploy', 'nounce', 'deem', 'main', 'gree', 'boat']
+    },
+    'Consonant-le': {
+        initial: [], // C-le is always final
+        any: [],
+        final: ['ble', 'cle', 'dle', 'fle', 'gle', 'kle', 'ple', 'tle', 'zle', 'stle']
+    }
+};
+
+const syllableTypes = [
+    { id: 'Closed', name: 'Closed (cat, sub)' },
+    { id: 'Open', name: 'Open (go, pro)' },
+    { id: 'VCE', name: 'Vowel-Consonant-e (bike)' },
+    { id: 'R-Controlled', name: 'R-Controlled (car, for)' },
+    { id: 'Vowel Team', name: 'Vowel Team (boat, tain)' },
+    { id: 'Consonant-le', name: '-ble, -cle' },
+];
+
+const syllableColors = {
+    'Closed': { bg: 'bg-rose-200', text: 'text-rose-800', border: 'border-rose-400' },
+    'Open': { bg: 'bg-sky-200', text: 'text-sky-800', border: 'border-sky-400' },
+    'VCE': { bg: 'bg-amber-200', text: 'text-amber-800', border: 'border-amber-400' },
+    'R-Controlled': { bg: 'bg-teal-200', text: 'text-teal-800', border: 'border-teal-400' },
+    'Vowel Team': { bg: 'bg-indigo-200', text: 'text-indigo-800', border: 'border-indigo-400' },
+    'Consonant-le': { bg: 'bg-fuchsia-200', text: 'text-fuchsia-800', border: 'border-fuchsia-400' },
+};
+
 
 // --- INLINED COMPONENTS ---
 
@@ -76,13 +127,13 @@ const ToggleSwitch = ({ checked, onChange }) => {
     );
 };
 
-
 const GameModeScreen = ({ setScreen }) => {
     return React.createElement("div", { className: "space-y-8 animate-fade-in" },
         React.createElement("h1", { className: "text-4xl md:text-6xl font-bold text-center text-gray-700" }, "Sounds in a Blender"),
         React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-8" },
             React.createElement(Button, { variant: "secondary", onClick: () => setScreen('soundSetup'), className: "text-3xl md:text-5xl py-8 md:py-16" }, "Sound Pack"),
-            React.createElement(Button, { variant: "primary", onClick: () => setScreen('wordSetup'), className: "text-3xl md:text-5xl py-8 md:py-16" }, "Word Generator")
+            React.createElement(Button, { variant: "primary", onClick: () => setScreen('wordSetup'), className: "text-3xl md:text-5xl py-8 md:py-16" }, "Word Generator"),
+            React.createElement(Button, { variant: "special", onClick: () => setScreen('syllableSpySetup'), className: "text-3xl md:text-5xl py-8 md:py-16 md:col-span-2" }, "Syllable Spy")
         )
     );
 };
@@ -195,6 +246,40 @@ const SoundSetupScreen = ({ settings, setSettings, gameMode, setGameMode, onStar
         React.createElement(Button, { variant: "secondary", onClick: () => onStart('sounds', gameMode), disabled: isStartDisabled, className: "text-3xl" }, "Start Game")
     );
 };
+
+const SyllableSpySetupScreen = ({ onStart, onBackToMenu, settings, setSettings }) => {
+    const handleCheckboxChange = (typeId) => {
+        setSettings(prev => {
+            const newSelection = { ...prev };
+            newSelection[typeId] = !newSelection[typeId];
+            return newSelection;
+        });
+    };
+
+    const isStartDisabled = Object.values(settings).every(v => !v);
+
+    return React.createElement("div", { className: "space-y-6 animate-fade-in" },
+        React.createElement("div", { className: "relative" },
+            React.createElement("h1", { className: "text-4xl md:text-6xl font-bold text-center text-gray-700" }, "Syllable Spy"),
+            React.createElement("button", { onClick: onBackToMenu, title: "Back to Menu", className: "absolute top-1/2 -translate-y-1/2 right-0 p-2 bg-gray-300 text-gray-700 rounded-lg shadow-[4px_4px_0_#2D3748] border-2 border-[#2D3748] hover:bg-gray-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#2D3748]" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" })))
+        ),
+        React.createElement("div", { className: "bg-white p-6 md:p-8 rounded-2xl shadow-lg border-2 border-gray-200" },
+            React.createElement("h2", { className: "text-2xl font-bold mb-4 text-center" }, "Choose Syllable Types"),
+            React.createElement("div", { className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-lg" },
+                syllableTypes.map(type =>
+                    React.createElement(CheckboxLabel, {
+                        key: type.id,
+                        label: type.name,
+                        checked: settings[type.id],
+                        onChange: () => handleCheckboxChange(type.id)
+                    })
+                )
+            )
+        ),
+        React.createElement(Button, { variant: "special", onClick: onStart, disabled: isStartDisabled, className: "text-3xl" }, "Start Spying")
+    );
+};
+
 
 const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem, onBackToMenu, onGameOver }) => {
     const [isSplit, setIsSplit] = useState(false);
@@ -363,6 +448,166 @@ const GameScreen = ({ gameType, gameMode, currentWord, currentSound, onNextItem,
     );
 };
 
+const SyllableSpyScreen = ({ word, onNextWord, onBackToMenu }) => {
+    const [isAnalysisMode, setIsAnalysisMode] = useState(false);
+    const [analysisStep, setAnalysisStep] = useState(0);
+    const [revealedSyllables, setRevealedSyllables] = useState({});
+    const [notFoundChecked, setNotFoundChecked] = useState(false);
+    const [isJoined, setIsJoined] = useState(true);
+    const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
+
+    const revlocOrder = ['R-Controlled', 'VCE', 'Vowel Team', 'Consonant-le', 'Open', 'Closed'];
+
+    useEffect(() => {
+        setIsAnalysisMode(false);
+        setAnalysisStep(0);
+        setRevealedSyllables({});
+        setIsJoined(true);
+        setIsAnalysisComplete(false);
+    }, [word]);
+    
+    useEffect(() => {
+        setNotFoundChecked(false);
+    }, [analysisStep]);
+
+    useEffect(() => {
+        if (word && analysisStep >= revlocOrder.length && !isAnalysisComplete) {
+            const finalRevealed = { ...revealedSyllables };
+            word.syllables.forEach((syllable, index) => {
+                if (!finalRevealed[index]) {
+                    finalRevealed[index] = syllable.type;
+                }
+            });
+            setRevealedSyllables(finalRevealed);
+            setIsAnalysisComplete(true);
+        }
+    }, [analysisStep, word, revealedSyllables, isAnalysisComplete]);
+
+
+    const handleSyllableClick = (syllableIndex) => {
+        if (!isAnalysisMode || revealedSyllables[syllableIndex] || isAnalysisComplete) return;
+
+        const currentSyllable = word.syllables[syllableIndex];
+        const targetType = revlocOrder[analysisStep];
+
+        if (currentSyllable.type === targetType) {
+            setRevealedSyllables(prev => ({ ...prev, [syllableIndex]: currentSyllable.type }));
+            if (isJoined) {
+                setIsJoined(false); // Trigger split view on first correct identification
+            }
+        }
+    };
+
+    const handleNotFoundChange = (e) => {
+        const isChecked = e.target.checked;
+        setNotFoundChecked(isChecked);
+        if (isChecked) {
+            // Use a timeout to allow the user to see the check before moving on
+            setTimeout(() => setAnalysisStep(prev => prev + 1), 300);
+        }
+    };
+    
+    const handleNextStep = () => {
+        setAnalysisStep(prev => prev + 1);
+    };
+    
+    const renderWord = () => {
+        if (!word) return null;
+    
+        const wordElements = [];
+        let previousPartWasJoined = true; 
+        
+        const syllableChunks = word.syllables.reduce((acc, syllable, index) => {
+            const isRevealed = !!revealedSyllables[index];
+            if (isRevealed || acc.length === 0 || !!revealedSyllables[index - 1]) {
+                acc.push([{ syllable, index }]);
+            } else {
+                acc[acc.length - 1].push({ syllable, index });
+            }
+            return acc;
+        }, []);
+
+
+        syllableChunks.forEach((chunk, chunkIndex) => {
+            const isChunkRevealed = chunk.every(item => !!revealedSyllables[item.index]);
+            const chunkElements = chunk.map(({ syllable, index }) => {
+                const isRevealed = !!revealedSyllables[index];
+                const colors = (isRevealed && !isJoined) ? syllableColors[syllable.type] : { bg: 'bg-transparent', text: 'text-gray-800', border: 'border-transparent' };
+                const baseStyle = `${isJoined ? '' : ''} py-1 text-6xl md:text-8xl font-bold transition-all`;
+                const interactiveStyle = isAnalysisMode && !isRevealed && !isAnalysisComplete ? 'cursor-pointer hover:bg-yellow-200 rounded-lg' : '';
+
+                return React.createElement(React.Fragment, { key: `syl-frag-${index}`},
+                    React.createElement('div', {
+                        className: `${baseStyle} ${interactiveStyle} ${colors.bg} ${colors.text} ${(isRevealed && !isJoined) ? 'rounded-lg border-b-4 px-1 ' + colors.border : ''}`,
+                        onClick: () => handleSyllableClick(index)
+                    }, syllable.text)
+                );
+            });
+
+            wordElements.push(React.createElement('div', { key: `chunk-wrapper-${chunkIndex}`, className: 'flex flex-col items-center' },
+                React.createElement('div', { className: 'flex items-end'}, ...chunkElements),
+                 (isChunkRevealed && !isJoined) && React.createElement('div', { className: `mt-2 text-sm font-bold ${syllableColors[chunk[0].syllable.type].text} animate-fade-in` }, chunk[0].syllable.type)
+            ));
+
+            if (chunkIndex < syllableChunks.length - 1) {
+                wordElements.push(React.createElement('div', {
+                    key: `spacer-${chunkIndex}`,
+                    className: `transition-all duration-300 ${!isJoined ? 'w-3 md:w-6' : 'w-0'}`
+                }));
+            }
+        });
+    
+        return React.createElement('div', { className: 'flex flex-wrap justify-center items-end' },
+            ...wordElements
+        );
+    };
+
+    const renderAnalysisPanel = () => {
+        if (!isAnalysisMode || isAnalysisComplete) return null;
+        
+        const currentType = revlocOrder[analysisStep];
+        if (!currentType) return null;
+
+        const colors = syllableColors[currentType];
+        const hasFoundCurrentType = word && word.syllables.some((syl, idx) => revealedSyllables[idx] && syl.type === currentType);
+
+        return React.createElement('div', { className: 'mt-8 p-4 border-4 border-dashed border-gray-400 rounded-2xl bg-gray-50 animate-fade-in' },
+            React.createElement('h3', { className: 'text-center font-bold text-gray-700 text-2xl mb-4' }, 'REVLOC Spotlight'),
+            React.createElement('div', { className: 'text-center p-4 rounded-lg text-xl font-bold' },
+                 React.createElement('p', {className: 'text-lg mb-2 text-gray-600'}, 'Find the syllable that is:'),
+                 React.createElement('p', { className: `text-3xl ${colors.text}` }, currentType)
+            ),
+             React.createElement('div', { className: 'mt-4 flex justify-center items-center gap-x-6' },
+                React.createElement('label', { className: 'flex items-center gap-2 cursor-pointer text-gray-600' },
+                    React.createElement('input', { type: 'checkbox', onChange: handleNotFoundChange, checked: notFoundChecked, className: 'h-5 w-5' }),
+                    "Not Found / Skip"
+                ),
+                React.createElement(Button, {
+                    variant: 'secondary',
+                    className: '!py-2 !text-lg',
+                    onClick: handleNextStep,
+                    disabled: !hasFoundCurrentType
+                }, "Next Step")
+            )
+        );
+    };
+
+    return React.createElement("div", { className: "flex flex-col h-full" },
+        React.createElement("div", { className: "flex justify-end mb-4" },
+            React.createElement("button", { onClick: onBackToMenu, title: "Back to Menu", className: "p-2 bg-gray-300 text-gray-700 rounded-lg shadow-[4px_4px_0_#2D3748] border-2 border-[#2D3748] hover:bg-gray-400 active:translate-x-0.5 active:translate-y-0.5 active:shadow-[2px_2px_0_#2D3748]" }, React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: "2" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" })))
+        ),
+        React.createElement("div", { className: "flex-grow flex flex-col items-center justify-center min-h-[300px]" }, renderWord()),
+        renderAnalysisPanel(),
+        isAnalysisComplete && React.createElement("div", { className: "text-center mt-8 text-xl font-bold text-green-600 animate-fade-in" }, "Analysis Complete!"),
+        React.createElement("div", { className: "mt-8 grid grid-cols-1 md:grid-cols-3 gap-4" },
+            React.createElement(Button, { variant: "primary", onClick: () => setIsAnalysisMode(true), disabled: isAnalysisMode }, "REVLOC Analysis"),
+            React.createElement(Button, { variant: "neutral", onClick: () => setIsJoined(p => !p), disabled: Object.keys(revealedSyllables).length === 0 }, isJoined ? "Split" : "Join"),
+            React.createElement(Button, { variant: "special", onClick: onNextWord }, "Next Word")
+        )
+    );
+};
+
+
 const GameOverScreen = ({ incorrectSounds, onStartMySounds, onGoToSoundSetup, onGoToWordSetup, onBackToMenu }) => {
     return React.createElement("div", { className: "text-center space-y-8 animate-fade-in" },
         React.createElement("h1", { className: "text-6xl md:text-8xl font-bold text-gray-700" }, "Time's Up!"),
@@ -435,12 +680,66 @@ const App = () => {
     const [gameMode, setGameMode] = useState('practice');
     const [wordSettings, setWordSettings] = useState({ digraphs: true, floss: false, longConsonants: false, initialBlends: false, finalBlends: false, silentE: false, longVowels: false, multisyllable: false, useShortVowels: true, selectedShortVowels: ['a', 'e', 'i', 'o', 'u'] });
     const [soundSettings, setSoundSettings] = useState({ bdpq: false, consonants: true, shortVowels: true, commonLongVowels: false, rControlled: false, lessCommonVowels: false, showVowelImages: false });
+    const [syllableSpySettings, setSyllableSpySettings] = useState({ Closed: true, Open: true, VCE: true, 'R-Controlled': true, 'Vowel Team': true, 'Consonant-le': true });
     const [currentWord, setCurrentWord] = useState([]);
     const [currentSound, setCurrentSound] = useState(null);
+    const [currentSyllableWord, setCurrentSyllableWord] = useState(null);
     const [mySoundsDeck, setMySoundsDeck] = useState([]);
     
     const getRandomElement = (arr) => arr[Math.floor(Math.random() * arr.length)];
     
+    const generateSyllableWord = useCallback(() => {
+        const allowedTypes = Object.keys(syllableSpySettings).filter(type => syllableSpySettings[type]);
+        if (allowedTypes.length === 0) {
+            setCurrentSyllableWord({ full: 'Select Types', syllables: [{ text: 'Select Types', type: 'Closed'}] });
+            return;
+        }
+
+        const numSyllables = Math.random() < 0.7 ? 3 : 4;
+        const generatedSyllables = [];
+        
+        for (let i = 0; i < numSyllables; i++) {
+            let syllableText, syllableType;
+            let attempts = 0;
+
+            while(attempts < 50) {
+                const randomType = getRandomElement(allowedTypes);
+                let pool;
+
+                if (i === 0) { // First syllable
+                    pool = syllableDatabase[randomType].initial.length > 0 ? syllableDatabase[randomType].initial : syllableDatabase[randomType].any;
+                } else if (i === numSyllables - 1) { // Last syllable
+                    if (randomType === 'Consonant-le') {
+                         pool = syllableDatabase[randomType].final;
+                    } else {
+                        const finalPool = syllableDatabase[randomType].final;
+                        const anyPool = syllableDatabase[randomType].any;
+                        pool = finalPool.length > 0 && Math.random() < 0.7 ? finalPool : anyPool;
+                    }
+                } else { // Middle syllable
+                    pool = syllableDatabase[randomType].any;
+                }
+
+                if (pool && pool.length > 0) {
+                    syllableText = getRandomElement(pool);
+                    syllableType = randomType;
+                    generatedSyllables.push({ text: syllableText, type: syllableType });
+                    break; 
+                }
+                attempts++;
+            }
+        }
+        
+        if (generatedSyllables.length > 0) {
+             setCurrentSyllableWord({
+                full: generatedSyllables.map(s => s.text).join(''),
+                syllables: generatedSyllables
+            });
+        } else {
+             setCurrentSyllableWord({ full: 'Try Again', syllables: [{ text: 'Try Again', type: 'Closed'}] });
+        }
+    }, [syllableSpySettings]);
+
     const generateSound = useCallback((soundPool) => {
         if (soundPool.length === 0) {
             setCurrentSound({ text: '...', font: 'font-poppins' });
@@ -570,6 +869,11 @@ const App = () => {
         setScreen('game');
     };
     
+    const handleStartSyllableSpy = useCallback(() => {
+        generateSyllableWord();
+        setScreen('syllableSpy');
+    }, [generateSyllableWord]);
+
     const handleGameOver = useCallback((incorrectSounds) => {
         setMySoundsDeck([...new Set(incorrectSounds)]);
         setScreen('gameOver');
@@ -599,7 +903,9 @@ const App = () => {
             case 'gameMode': return React.createElement(GameModeScreen, { setScreen: setScreen });
             case 'wordSetup': return React.createElement(WordSetupScreen, { settings: wordSettings, setSettings: setWordSettings, gameMode: gameMode, setGameMode: setGameMode, onStart: handleStartGame, onBackToMenu: handleBackToMenu });
             case 'soundSetup': return React.createElement(SoundSetupScreen, { settings: soundSettings, setSettings: setSoundSettings, gameMode: gameMode, setGameMode: setGameMode, onStart: handleStartGame, onBackToMenu: handleBackToMenu });
+            case 'syllableSpySetup': return React.createElement(SyllableSpySetupScreen, { onStart: handleStartSyllableSpy, onBackToMenu: handleBackToMenu, settings: syllableSpySettings, setSettings: setSyllableSpySettings });
             case 'game': return React.createElement(GameScreen, { gameType: gameType, gameMode: gameMode, currentWord: currentWord, currentSound: currentSound, onNextItem: handleNextItem, onBackToMenu: handleBackToMenu, onGameOver: handleGameOver });
+            case 'syllableSpy': return React.createElement(SyllableSpyScreen, { word: currentSyllableWord, onNextWord: generateSyllableWord, onBackToMenu: handleBackToMenu });
             case 'gameOver': return React.createElement(GameOverScreen, { incorrectSounds: mySoundsDeck, onStartMySounds: () => setScreen('mySounds'), onGoToSoundSetup: () => setScreen('soundSetup'), onGoToWordSetup: () => setScreen('wordSetup'), onBackToMenu: handleBackToMenu });
             case 'mySounds': return React.createElement(MySoundsScreen, { mySoundsDeck: mySoundsDeck, onBackToMenu: handleBackToMenu });
             default: return React.createElement(GameModeScreen, { setScreen: setScreen });
