@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 
@@ -569,7 +570,7 @@ const SyllableSpyScreen = ({ word, onNextWord, onBackToMenu }) => {
             ),
              React.createElement('div', { className: 'mt-4 grid grid-cols-2 gap-4' },
                 React.createElement(Button, {
-                    variant: 'neutral',
+                    variant: 'special',
                     className: '!py-3 !text-lg',
                     onClick: handleSkipStep
                 }, "Not Found / Skip"),
